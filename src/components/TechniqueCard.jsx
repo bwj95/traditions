@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Clock } from 'lucide-react'
 import { getTradition } from '../data.js'
 import { CategoryBadge, DifficultyBadge } from './Badges.jsx'
+import TraditionEmblem from './emblems.jsx'
 
 // A card summarizing one technique. `showTradition` hides the tradition line on
 // pages that are already scoped to a single tradition.
@@ -19,7 +20,10 @@ export default function TechniqueCard({ technique, showTradition = true }) {
         </div>
         <h3 className="tech-card-title">{technique.title}</h3>
         {showTradition && trad && (
-          <p className="tech-card-trad">{trad.name}</p>
+          <p className="tech-card-trad">
+            <TraditionEmblem id={trad.id} size={15} className="trad-inline-emblem" />
+            {trad.name}
+          </p>
         )}
         <p className="tech-card-desc">{technique.description}</p>
         <div className="tech-card-meta">

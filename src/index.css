@@ -179,8 +179,46 @@ a {
 
 /* ---------- Home ---------- */
 .hero {
+  position: relative;
   padding: 32px 0 20px;
   max-width: 720px;
+}
+
+.hero > *:not(.hero-glow) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Soft animated color mesh behind the headline, tinted with the four category
+   hues. Purely decorative; disabled for reduced-motion. */
+.hero-glow {
+  position: absolute;
+  inset: -60px -25% auto -12%;
+  height: 360px;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(38% 60% at 18% 32%, hsl(152 48% 58% / 0.3), transparent 70%),
+    radial-gradient(34% 55% at 68% 18%, hsl(199 62% 60% / 0.26), transparent 70%),
+    radial-gradient(44% 60% at 88% 58%, hsl(28 72% 62% / 0.24), transparent 70%),
+    radial-gradient(40% 55% at 42% 72%, hsl(258 52% 66% / 0.24), transparent 70%);
+  filter: blur(26px);
+  animation: heroDrift 20s ease-in-out infinite alternate;
+}
+
+@keyframes heroDrift {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.09);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-glow {
+    animation: none;
+  }
 }
 
 .hero h1 {
@@ -370,6 +408,14 @@ a {
   font-size: 0.82rem;
   color: var(--accent);
   font-weight: 550;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.trad-inline-emblem {
+  flex-shrink: 0;
+  color: var(--accent);
 }
 
 .tech-card-desc {
@@ -652,6 +698,59 @@ a {
 .empty-note {
   color: var(--text-soft);
   font-size: 1rem;
+}
+
+/* ---------- Emblems & category icons ---------- */
+.cat-tile-icon {
+  display: block;
+  margin-bottom: 12px;
+  color: hsl(var(--badge-hue) 42% 48%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cat-tile-icon {
+    color: hsl(var(--badge-hue) 45% 68%);
+  }
+}
+
+.trad-tile {
+  position: relative;
+}
+
+.trad-tile-emblem {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--accent);
+  opacity: 0.92;
+  transition: transform 0.2s ease;
+}
+
+.trad-tile:hover .trad-tile-emblem {
+  transform: scale(1.08) rotate(-3deg);
+}
+
+.tradition-hero-emblem {
+  display: block;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.category-hero-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+  background: hsl(var(--badge-hue) 45% 92%);
+  color: hsl(var(--badge-hue) 42% 34%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .category-hero-icon {
+    background: hsl(var(--badge-hue) 30% 20%);
+    color: hsl(var(--badge-hue) 48% 72%);
+  }
 }
 
 /* ---------- Responsive ---------- */

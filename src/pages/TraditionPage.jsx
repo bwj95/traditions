@@ -2,6 +2,7 @@ import { useParams, Navigate, Link } from 'react-router-dom'
 import { ArrowLeft, MapPin } from 'lucide-react'
 import { getTradition, techniquesByTradition } from '../data.js'
 import TechniqueCard from '../components/TechniqueCard.jsx'
+import TraditionEmblem from '../components/emblems.jsx'
 
 // Shows a tradition's blurb and all techniques tagged to it.
 export default function TraditionPage() {
@@ -17,7 +18,8 @@ export default function TraditionPage() {
       <Link to="/" className="back-link">
         <ArrowLeft size={16} aria-hidden /> All traditions
       </Link>
-      <header className="page-header">
+      <header className="page-header tradition-header">
+        <TraditionEmblem id={tradition.id} size={56} className="tradition-hero-emblem" />
         <p className="eyebrow">Tradition</p>
         <h1>{tradition.name}</h1>
         <p className="region-line">

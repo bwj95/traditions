@@ -9,11 +9,14 @@ import {
   techniques,
 } from '../data.js'
 import TechniqueCard from '../components/TechniqueCard.jsx'
+import CategoryIcon from '../components/CategoryIcon.jsx'
+import TraditionEmblem from '../components/emblems.jsx'
 
 export default function Home() {
   return (
     <div className="home">
       <section className="hero">
+        <div className="hero-glow" aria-hidden />
         <h1>
           Time-tested ways to feel <em>better</em>.
         </h1>
@@ -37,6 +40,7 @@ export default function Home() {
                 className="cat-tile"
                 style={{ '--badge-hue': meta.hue }}
               >
+                <CategoryIcon category={c} size={22} className="cat-tile-icon" />
                 <span className="cat-tile-count">{categoryCounts[c]}</span>
                 <h3>{meta.label}</h3>
                 <p>{meta.blurb}</p>
@@ -72,6 +76,7 @@ export default function Home() {
         <div className="trad-grid">
           {traditions.map((tr) => (
             <Link key={tr.id} to={`/tradition/${tr.id}`} className="trad-tile">
+              <TraditionEmblem id={tr.id} size={30} className="trad-tile-emblem" />
               <h3>{tr.name}</h3>
               <span className="trad-region">{tr.region}</span>
               <p>{tr.blurb}</p>

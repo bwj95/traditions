@@ -2,6 +2,7 @@ import { useParams, Navigate, Link } from 'react-router-dom'
 import { ArrowLeft, Clock, Quote } from 'lucide-react'
 import { getTechnique, getTradition } from '../data.js'
 import { CategoryBadge, DifficultyBadge } from '../components/Badges.jsx'
+import TraditionEmblem from '../components/emblems.jsx'
 
 // Full step-by-step detail for a single technique.
 export default function TechniquePage() {
@@ -36,6 +37,7 @@ export default function TechniquePage() {
           </span>
           {trad && (
             <span className="meta-item">
+              <TraditionEmblem id={trad.id} size={16} className="trad-inline-emblem" />
               From{' '}
               <Link to={`/tradition/${trad.id}`} className="inline-link">
                 {trad.name}

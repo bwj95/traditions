@@ -5,6 +5,7 @@ import {
   traditions,
 } from '../data.js'
 import TechniqueCard from '../components/TechniqueCard.jsx'
+import CategoryIcon from '../components/CategoryIcon.jsx'
 
 // Lists every technique in a category, grouped by tradition.
 export default function CategoryPage({ validCategories }) {
@@ -27,7 +28,10 @@ export default function CategoryPage({ validCategories }) {
 
   return (
     <div className="category-page" style={{ '--badge-hue': meta.hue }}>
-      <header className="page-header">
+      <header className="page-header category-header">
+        <span className="category-hero-icon">
+          <CategoryIcon category={category} size={30} />
+        </span>
         <p className="eyebrow">Category</p>
         <h1>{meta.label}</h1>
         <p className="page-lede">{meta.blurb}</p>
