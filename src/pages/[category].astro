@@ -1,0 +1,44 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  categories, categoryMeta, techniquesByCategory, traditions, type CategoryId,
+} from '../data/content';
+import { url } from '../utils';
+import TechniqueCard from '../components/TechniqueCard.astro';
+import CategoryIcon from '../components/CategoryIcon.astro';
+
+export function getStaticPaths() {
+  return categories.map((category) => ({ params: { category } }));
+}
+
+const category = Astro.params.category as CategoryId;
+const meta = categoryMeta[category];
+const items = techniquesByCategory(category);
+
+// Group by tradition, preserving tradition list order.
+const grouped = traditions
+  .map((tr) => ({ tradition: tr, items: items.filter((t) => t.tradition === tr.id) }))
+  .filter((g) => g.items.length > 0);
+---
+<Base title={`${meta.label} practices — Traditions`} description={meta.blurb} activeCategory={category}>
+  <div style={`--badge-hue:${meta.hue}`}>
+    <header class="page-header">
+      <span class="category-hero-icon"><CategoryIcon category={category} size={30} /></span>
+      <p class="eyebrow">Category</p>
+      <h1>{meta.label}</h1>
+      <p class="page-lede">{meta.blurb}</p>
+      <p class="count-note">{items.length} practices</p>
+    </header>
+
+    {grouped.map(({ tradition, items }) => (
+      <section class="section">
+        <h2 class="section-title group-title">
+          <a href={url(`tradition/${tradition.id}`)}>{tradition.name}</a>
+        </h2>
+        <div class="card-grid">
+          {items.map((t) => <TechniqueCard technique={t} />)}
+        </div>
+      </section>
+    ))}
+  </div>
+</Base>

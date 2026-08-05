@@ -1,0 +1,29 @@
+---
+import { Image } from 'astro:assets';
+import type { Tradition } from '../data/content';
+import { traditionTile } from '../data/images';
+import { url } from '../utils';
+import Emblem from './Emblem.astro';
+
+interface Props { tradition: Tradition }
+const { tradition } = Astro.props;
+const img = traditionTile(tradition.id);
+---
+<a href={url(`tradition/${tradition.id}`)} class="trad-card">
+  {img ? (
+    <div class="card-media">
+      <Image src={img} alt={tradition.name} widths={[320, 480, 640]} quality={68}
+        sizes="(max-width: 720px) 90vw, 340px" loading="lazy" />
+      <span class="card-media-region">{tradition.region}</span>
+    </div>
+  ) : (
+    <div class="card-media card-media--emblem">
+      <Emblem id={tradition.id} size={68} />
+      <span class="card-media-region">{tradition.region}</span>
+    </div>
+  )}
+  <div class="trad-card-body">
+    <h3>{tradition.name}</h3>
+    <p>{tradition.blurb}</p>
+  </div>
+</a>

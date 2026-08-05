@@ -1,0 +1,650 @@
+{
+  "categories": ["mind", "body", "breath", "diet"],
+  "traditions": [
+    {
+      "id": "shaolin",
+      "name": "Shaolin / Chan Buddhist Monastic Practice",
+      "region": "China",
+      "blurb": "Combines physical discipline, breath control, and meditation developed by Shaolin monks for both combat readiness and inner stillness."
+    },
+    {
+      "id": "chinese-taoist",
+      "name": "Ancient Chinese / Taoist & TCM",
+      "region": "China",
+      "blurb": "Traditional Chinese Medicine and Taoist practices focused on qi (vital energy) balance, seasonal living, and food-as-medicine."
+    },
+    {
+      "id": "mexican-indigenous",
+      "name": "Mexican / Indigenous (Nahua & Maya-descended)",
+      "region": "Mexico / Mesoamerica",
+      "blurb": "Practices rooted in Nahua and Maya-descended traditions, including curanderismo (traditional healing), temazcal (sweat lodge), and plant medicine."
+    },
+    {
+      "id": "buddhism",
+      "name": "Buddhism (Theravada & Zen)",
+      "region": "India / Southeast Asia / Japan",
+      "blurb": "Meditation and mindfulness techniques focused on awareness, emotional regulation, and mental clarity."
+    },
+    {
+      "id": "ayurveda",
+      "name": "Ayurveda",
+      "region": "India",
+      "blurb": "India's traditional system of medicine focused on daily routines (dinacharya), constitution types (doshas), and diet as the foundation of wellness."
+    },
+    {
+      "id": "japanese-zen",
+      "name": "Japanese Zen & Nature Practice",
+      "region": "Japan",
+      "blurb": "Zen meditation practices and nature-based rituals developed for mental clarity and stress reduction."
+    },
+    {
+      "id": "stoicism",
+      "name": "Stoicism",
+      "region": "Ancient Greece / Rome",
+      "blurb": "A philosophical practice (Epictetus, Seneca, Marcus Aurelius) focused on mental discipline, perspective-taking, and separating what is and isn't in your control."
+    },
+    {
+      "id": "nordic-sami",
+      "name": "Nordic & Sámi Traditions",
+      "region": "Scandinavia / Arctic Circle",
+      "blurb": "Practices rooted in Nordic and Sámi (Indigenous Arctic) life, centered on cold exposure, communal warmth, and rhythm with harsh seasonal light/dark cycles."
+    },
+    {
+      "id": "west-african-yoruba",
+      "name": "West African / Yoruba-Descended Traditions",
+      "region": "West Africa / African diaspora",
+      "blurb": "Practices from Yoruba and broader West African traditions, including rhythm/drumming for emotional release, communal ritual, and ancestral connection practices."
+    }
+  ],
+  "techniques": [
+    {
+      "id": "zhan-zhuang",
+      "title": "Zhan Zhuang (Standing Meditation)",
+      "tradition": "shaolin",
+      "category": ["body", "mind"],
+      "origin": "Shaolin & internal martial arts training",
+      "description": "A stillness practice where you hold a relaxed standing posture, building internal strength, grounding, and focus without visible movement.",
+      "steps": [
+        "Stand with feet shoulder-width apart, knees slightly bent.",
+        "Round your arms as if hugging a large tree, hands at chest height.",
+        "Relax shoulders down, tuck chin slightly, keep spine long.",
+        "Hold the posture, breathing naturally through the nose, for 3-10 minutes.",
+        "Focus attention on sensations in the arms and lower belly (dantian)."
+      ],
+      "duration": "3-15 min",
+      "benefits": ["Grounding", "Improved focus", "Builds physical endurance", "Reduces anxiety"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "baduanjin",
+      "title": "Eight Pieces of Brocade (Baduanjin)",
+      "tradition": "shaolin",
+      "category": ["body", "breath"],
+      "origin": "Shaolin / Taoist Qigong lineage",
+      "description": "A sequence of eight gentle movements paired with breath, traditionally used as a short daily set to circulate energy and loosen the body.",
+      "steps": [
+        "Movement 1: 'Two Hands Hold Up the Heavens' — reach arms overhead on inhale, lower on exhale.",
+        "Movement 2: 'Draw the Bow' — mimic drawing a bow side to side, opens chest.",
+        "Continue through the remaining six movements at a slow, breath-paced tempo (full sequences widely documented).",
+        "Repeat the full set 1-3 times, always syncing breath to movement."
+      ],
+      "duration": "10-15 min",
+      "benefits": ["Loosens joints", "Improves circulation", "Calms nervous system"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "shaolin-diaphragm-breath",
+      "title": "Diaphragmatic Combat Breathing",
+      "tradition": "shaolin",
+      "category": ["breath"],
+      "origin": "Shaolin martial training",
+      "description": "Deep belly breathing used by monks to stay calm and generate power during physical exertion, adaptable as a stress-response reset.",
+      "steps": [
+        "Place one hand on the belly, one on the chest.",
+        "Inhale through the nose, expanding the belly (not the chest) for a count of 4.",
+        "Hold briefly for a count of 2.",
+        "Exhale slowly through the mouth for a count of 6.",
+        "Repeat for 10 cycles."
+      ],
+      "duration": "3-5 min",
+      "benefits": ["Rapid stress reduction", "Improves oxygenation", "Sharpens focus before action"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "hegu-acupressure",
+      "title": "Hegu (LI4) Acupressure Point",
+      "tradition": "chinese-taoist",
+      "category": ["body"],
+      "origin": "Traditional Chinese Medicine",
+      "description": "A self-massage point on the hand traditionally used to relieve headaches, stress, and tension.",
+      "steps": [
+        "Locate the point in the webbing between thumb and index finger.",
+        "Using the opposite thumb, press firmly into the point.",
+        "Massage in small circles for 30-60 seconds.",
+        "Switch hands and repeat.",
+        "Note: traditionally avoided during pregnancy."
+      ],
+      "duration": "2-3 min",
+      "benefits": ["Headache relief", "Stress reduction", "Quick reset between tasks"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "five-element-eating",
+      "title": "Five-Element Food Energetics",
+      "tradition": "chinese-taoist",
+      "category": ["diet"],
+      "origin": "Traditional Chinese Medicine",
+      "description": "TCM classifies foods as warming, cooling, or neutral, and matches them to season and individual constitution rather than fixed nutrition rules.",
+      "steps": [
+        "In cold months or if often feeling cold/fatigued, favor warming foods: ginger, cinnamon, cooked stews, bone broth.",
+        "In hot months or if often feeling irritable/inflamed, favor cooling foods: cucumber, mung bean, watermelon, leafy greens.",
+        "Favor cooked, warm meals over raw/cold food for easier digestion, especially in the morning.",
+        "Eat with the season: root vegetables in winter, light greens in spring/summer."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Better digestion", "Energy stability", "Seasonal alignment"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "qi-gong-morning-routine",
+      "title": "Morning Qi Circulation Set",
+      "tradition": "chinese-taoist",
+      "category": ["body", "breath"],
+      "origin": "Taoist internal alchemy / Qigong",
+      "description": "A short sequence of self-massage and gentle stretching done immediately upon waking to 'wake up' the body's energy.",
+      "steps": [
+        "Rub palms together until warm, then cup over closed eyes.",
+        "Gently tap down the arms, torso, and legs with loose fists.",
+        "Rotate the neck and shoulders slowly in both directions.",
+        "Finish with 10 slow, deep breaths, hands resting on the lower belly."
+      ],
+      "duration": "5-8 min",
+      "benefits": ["Wakes up circulation", "Reduces stiffness", "Sets a calm tone for the day"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "temazcal-home-adaptation",
+      "title": "Temazcal-Inspired Heat & Breath Ritual",
+      "tradition": "mexican-indigenous",
+      "category": ["body", "mind"],
+      "origin": "Nahua & Mesoamerican sweat lodge tradition",
+      "description": "The temazcal is a ceremonial sweat lodge for physical and spiritual cleansing. A home-adapted version uses heat, breath, and intention (not a substitute for an authentic ceremony with a guide).",
+      "steps": [
+        "Take a hot shower or bath, setting an intention for what you want to release.",
+        "While in the heat, breathe slowly and deeply, visualizing tension leaving the body with each exhale.",
+        "Optional: burn copal or a similar resin nearby (in a ventilated space) as is traditional in ceremony.",
+        "After, drink water and sit quietly for a few minutes before returning to activity.",
+        "Note: for the full ceremonial experience, seek an authentic temazcal led by a trained practitioner."
+      ],
+      "duration": "15-20 min",
+      "benefits": ["Physical relaxation", "Emotional release", "Ritual grounding"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "limpia-self-cleanse",
+      "title": "Simplified Limpia (Energetic Cleansing)",
+      "tradition": "mexican-indigenous",
+      "category": ["mind"],
+      "origin": "Curanderismo (Mexican traditional healing)",
+      "description": "A limpia is traditionally performed by a curandero/a using herbs, eggs, or smoke to clear negative energy. This is a simplified self-practice version for daily use, not a replacement for a full ceremony.",
+      "steps": [
+        "Stand or sit quietly and name what you want to release (a worry, a bad interaction, tension).",
+        "Use a bundle of rosemary or other aromatic herb; pass it around your body from head to feet (or use smoke from copal/palo santo in a ventilated space).",
+        "Speak an intention aloud, e.g. 'I release what does not serve me.'",
+        "Finish by washing your hands and face with cool water."
+      ],
+      "duration": "5-10 min",
+      "benefits": ["Symbolic release of stress", "Mental reset", "Connection to ritual/tradition"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "tila-manzanilla-tea",
+      "title": "Tila & Manzanilla (Calming Herbal Teas)",
+      "tradition": "mexican-indigenous",
+      "category": ["diet"],
+      "origin": "Traditional Mexican herbal medicine",
+      "description": "Tila (linden flower) and manzanilla (chamomile) are traditional Mexican remedies for anxiety, poor sleep, and stomach upset.",
+      "steps": [
+        "Steep 1-2 tsp dried tila or manzanilla flowers in hot water for 5-10 minutes.",
+        "Drink in the evening to support calm and sleep, or after meals for digestion.",
+        "Can be combined with a drop of honey.",
+        "Note: consult a doctor if pregnant, nursing, or on medication, as herbal remedies can interact with treatments."
+      ],
+      "duration": "5 min prep",
+      "benefits": ["Calms nervous system", "Aids sleep", "Soothes digestion"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "nixtamal-diet-principle",
+      "title": "Traditional Mexican Whole-Food Principle (Maíz, Frijol, Chile)",
+      "tradition": "mexican-indigenous",
+      "category": ["diet"],
+      "origin": "Nahua & broader Mesoamerican foodways",
+      "description": "The traditional Mesoamerican diet centers on nixtamalized corn, beans, and chile — a nutritionally complete, whole-food combination refined over centuries.",
+      "steps": [
+        "Favor nixtamalized corn products (traditional tortillas, tamales) over refined flour where possible.",
+        "Pair corn with beans regularly — together they form a complete protein.",
+        "Include fresh chile, tomato, and herbs like epazote for flavor and micronutrients rather than heavy processed sauces.",
+        "Cook meals from whole ingredients rather than pre-packaged versions when practical."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Balanced nutrition", "Cultural connection", "Sustained energy"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "anapanasati",
+      "title": "Anapanasati (Breath Awareness Meditation)",
+      "tradition": "buddhism",
+      "category": ["breath", "mind"],
+      "origin": "Theravada Buddhism",
+      "description": "One of the foundational Buddhist meditations: simply observing the natural breath without controlling it, to train sustained attention.",
+      "steps": [
+        "Sit comfortably with a straight but relaxed spine.",
+        "Close your eyes and bring attention to the sensation of breath at the nostrils or belly.",
+        "Don't control the breath — just notice it as it naturally happens.",
+        "When the mind wanders, gently return attention to the breath, without judgment.",
+        "Start with 5-10 minutes and build up over time."
+      ],
+      "duration": "5-20 min",
+      "benefits": ["Improves focus", "Reduces reactivity", "Foundational calm"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "metta-meditation",
+      "title": "Metta (Loving-Kindness Meditation)",
+      "tradition": "buddhism",
+      "category": ["mind"],
+      "origin": "Theravada Buddhism",
+      "description": "A structured meditation for cultivating goodwill toward yourself and others, used to soften self-criticism and reduce interpersonal resentment.",
+      "steps": [
+        "Sit quietly and silently repeat: 'May I be happy. May I be healthy. May I be at ease.'",
+        "After a few minutes, bring to mind someone you love and repeat the same phrases for them.",
+        "Extend to a neutral person, then (optionally) someone you have difficulty with.",
+        "Finish by extending the phrases to 'all beings.'"
+      ],
+      "duration": "10-15 min",
+      "benefits": ["Reduces self-criticism", "Builds emotional resilience", "Improves relationships"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "walking-meditation",
+      "title": "Walking Meditation (Kinhin)",
+      "tradition": "buddhism",
+      "category": ["body", "mind"],
+      "origin": "Zen Buddhism",
+      "description": "A slow, deliberate walking practice used between sitting meditations to maintain mindfulness while in motion.",
+      "steps": [
+        "Choose a quiet path, 10-20 steps long.",
+        "Walk slowly, feeling the sensation of each foot lifting, moving, and placing down.",
+        "Keep hands clasped or relaxed at your sides; eyes softly lowered.",
+        "At the end of the path, pause, turn, and continue.",
+        "Practice for 5-15 minutes, especially useful when sitting still feels hard."
+      ],
+      "duration": "5-15 min",
+      "benefits": ["Grounding", "Mindfulness in motion", "Good alternative when restless"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "dinacharya",
+      "title": "Dinacharya (Ayurvedic Daily Routine)",
+      "tradition": "ayurveda",
+      "category": ["mind", "body"],
+      "origin": "Ayurveda",
+      "description": "A structured daily routine believed to align the body with natural rhythms, reducing stress and improving energy and digestion.",
+      "steps": [
+        "Wake before sunrise (or consistently early) rather than sleeping in.",
+        "Scrape the tongue and drink a glass of warm water upon waking.",
+        "Practice a few minutes of stretching or gentle movement before eating.",
+        "Eat the largest meal at midday when digestion is considered strongest.",
+        "Wind down with no screens for 30-60 minutes before a consistent bedtime."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Better sleep", "Digestive regularity", "Reduced stress from unpredictability"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "ayurvedic-warm-oil-massage",
+      "title": "Abhyanga (Self Warm-Oil Massage)",
+      "tradition": "ayurveda",
+      "category": ["body"],
+      "origin": "Ayurveda",
+      "description": "A daily self-massage with warm oil, traditionally used to calm the nervous system and improve circulation.",
+      "steps": [
+        "Warm a neutral oil (sesame is traditional) slightly.",
+        "Massage into scalp, then work down the body toward the heart in long strokes on limbs, circular on joints.",
+        "Let the oil sit for 5-10 minutes if possible.",
+        "Shower with warm water, using minimal soap to leave a light residue."
+      ],
+      "duration": "10-20 min",
+      "benefits": ["Calms nervous system", "Improves skin/circulation", "Grounding ritual"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "shinrin-yoku",
+      "title": "Shinrin-Yoku (Forest Bathing)",
+      "tradition": "japanese-zen",
+      "category": ["mind", "body"],
+      "origin": "Japan (developed 1980s, rooted in Shinto/Zen nature reverence)",
+      "description": "A practice of unhurried, sensory immersion in nature, distinct from exercise or hiking — the goal is presence, not distance covered.",
+      "steps": [
+        "Go to a natural area (a park is fine) with no destination or pace goal.",
+        "Walk slowly, deliberately noticing sounds, smells, textures, and light.",
+        "Pause and sit for several minutes, simply observing surroundings.",
+        "Leave phone notifications off; the point is unstructured sensory attention.",
+        "Aim for at least 20-40 minutes."
+      ],
+      "duration": "20-40 min",
+      "benefits": ["Lowers stress hormones", "Improves mood", "Restores attention"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "zazen",
+      "title": "Zazen (Seated Zen Meditation)",
+      "tradition": "japanese-zen",
+      "category": ["mind", "breath"],
+      "origin": "Zen Buddhism, Japan",
+      "description": "The core sitting meditation of Zen practice, emphasizing upright posture and open awareness rather than a specific focus object.",
+      "steps": [
+        "Sit on a cushion or chair with an upright, dignified posture.",
+        "Rest hands in your lap, one on top of the other, thumbs lightly touching.",
+        "Keep eyes slightly open, gaze low, unfocused.",
+        "Breathe naturally; let thoughts arise and pass without engaging them.",
+        "Practice for a set period (start with 10 minutes), often marked with a bell."
+      ],
+      "duration": "10-30 min",
+      "benefits": ["Deep mental clarity", "Present-moment awareness", "Emotional equanimity"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "shaolin-monastic-diet",
+      "title": "Monastic Simplicity Eating Principle",
+      "tradition": "shaolin",
+      "category": ["diet"],
+      "origin": "Shaolin monastic tradition (Chan Buddhist vegetarianism)",
+      "description": "Shaolin monks traditionally eat a simple, plant-based diet, viewed as supporting both physical training and mental clarity.",
+      "steps": [
+        "Build meals around vegetables, grains (rice, noodles), and tofu/legumes rather than heavy meat.",
+        "Eat until about 80% full, stopping before feeling stuffed.",
+        "Eat at consistent times, avoiding late heavy meals before training or sleep.",
+        "Minimize processed/fried food in favor of simply prepared whole ingredients."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Lighter digestion", "Sustained energy", "Mental clarity"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "taoist-inner-smile",
+      "title": "Inner Smile Meditation",
+      "tradition": "chinese-taoist",
+      "category": ["mind"],
+      "origin": "Taoist internal alchemy",
+      "description": "A visualization practice where you direct a feeling of warmth/smiling attention to each internal organ, traditionally believed to relax the body and settle emotion.",
+      "steps": [
+        "Sit comfortably and bring a slight smile to your face, even if it feels artificial at first.",
+        "Direct that 'smiling' warm attention to your eyes, then down to the heart, lungs, liver, and stomach in turn.",
+        "Pause a few breaths at each area, noticing any tension and letting it soften.",
+        "Finish by resting attention on the lower belly (dantian) for a minute."
+      ],
+      "duration": "8-12 min",
+      "benefits": ["Emotional release", "Body awareness", "Relaxation"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "sahumerio-breath-ritual",
+      "title": "Sahumerio Breath & Smoke Ritual",
+      "tradition": "mexican-indigenous",
+      "category": ["breath"],
+      "origin": "Mexican/Mesoamerican smoke-cleansing tradition",
+      "description": "A grounding ritual pairing slow breath with copal or herb smoke, traditionally used to mark a transition (start of day, entering a space, after conflict).",
+      "steps": [
+        "Light copal resin or a dried herb bundle in a heatproof dish (ventilated space or outdoors).",
+        "Stand a comfortable distance away and take slow breaths, allowing the scent to arrive naturally (don't force smoke inhalation).",
+        "With each exhale, mentally release one specific tension or worry.",
+        "Close with three slow breaths of gratitude before returning to activity."
+      ],
+      "duration": "5 min",
+      "benefits": ["Ritual transition marker", "Calms breathing", "Mental reset"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "buddhist-mindful-eating",
+      "title": "Mindful Eating Practice",
+      "tradition": "buddhism",
+      "category": ["diet", "mind"],
+      "origin": "Buddhist mindfulness tradition",
+      "description": "Eating slowly and with full attention, traditionally used to build present-moment awareness and a healthier relationship with food.",
+      "steps": [
+        "Before eating, pause for one breath and silently acknowledge the food in front of you.",
+        "Eat without screens or reading; place utensils down between bites.",
+        "Notice texture, flavor, and temperature fully for the first few bites.",
+        "Check in partway through the meal on actual hunger/fullness rather than eating on autopilot."
+      ],
+      "duration": "per meal",
+      "benefits": ["Reduces overeating", "Improves digestion", "Builds present-moment habit"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "ayurvedic-nadi-shodhana",
+      "title": "Nadi Shodhana (Alternate Nostril Breathing)",
+      "tradition": "ayurveda",
+      "category": ["breath"],
+      "origin": "Ayurveda / Yogic tradition",
+      "description": "A balancing breath technique traditionally used to calm the nervous system and clear the mind before focused work or sleep.",
+      "steps": [
+        "Sit comfortably, spine tall.",
+        "Close the right nostril with the right thumb, inhale slowly through the left nostril.",
+        "Close the left nostril with the ring finger, release the thumb, exhale through the right nostril.",
+        "Inhale through the right, then switch and exhale through the left. This completes one round.",
+        "Repeat for 5-10 rounds."
+      ],
+      "duration": "5-8 min",
+      "benefits": ["Calms nervous system", "Improves focus", "Balances energy"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "ayurvedic-dosha-diet",
+      "title": "Eating for Your Dosha (Constitution)",
+      "tradition": "ayurveda",
+      "category": ["diet"],
+      "origin": "Ayurveda",
+      "description": "Ayurveda suggests adjusting diet based on constitution type (Vata, Pitta, Kapha) rather than a single universal diet.",
+      "steps": [
+        "If prone to anxiety, dry skin, or feeling 'scattered' (Vata-type), favor warm, moist, grounding foods like soups and cooked grains.",
+        "If prone to irritability or heartburn (Pitta-type), favor cooling foods and avoid excess spice/fried food.",
+        "If prone to sluggishness or weight gain (Kapha-type), favor lighter, warming, spiced foods and reduce heavy dairy/sugar.",
+        "Eat the main meal at midday and keep dinner lighter, regardless of type."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Personalized digestion support", "Energy stability"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "japanese-ikigai-reflection",
+      "title": "Ikigai Reflection",
+      "tradition": "japanese-zen",
+      "category": ["mind"],
+      "origin": "Japanese life-philosophy concept",
+      "description": "A reflective practice for identifying your 'reason for being' at the intersection of what you love, what you're good at, what the world needs, and what sustains you.",
+      "steps": [
+        "Take a quiet 15 minutes with paper (not a screen).",
+        "Write short answers to: What do I love? What am I good at? What does the world need from me? What sustains me practically?",
+        "Look for overlaps between the answers rather than forcing one perfect answer.",
+        "Revisit and revise this every few months rather than treating it as fixed."
+      ],
+      "duration": "15-20 min",
+      "benefits": ["Clarifies purpose", "Reduces existential drift", "Long-term motivation"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "japanese-osechi-seasonal-eating",
+      "title": "Seasonal, Small-Plate Eating (Shun)",
+      "tradition": "japanese-zen",
+      "category": ["diet"],
+      "origin": "Japanese food philosophy (shun = seasonality)",
+      "description": "Traditional Japanese eating emphasizes seasonal ingredients at their peak, served in smaller varied portions rather than one large dish.",
+      "steps": [
+        "Favor whatever produce/fish is currently in season locally over out-of-season imports.",
+        "Serve meals as several small varied dishes rather than one large plate — encourages natural portion control.",
+        "Follow 'hara hachi bu' — eat until about 80% full.",
+        "Include fermented foods (miso, pickles) regularly for digestion."
+      ],
+      "duration": "ongoing/daily",
+      "benefits": ["Natural portion control", "Dietary variety", "Digestive support"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "stoic-dichotomy-of-control",
+      "title": "Dichotomy of Control Reflection",
+      "tradition": "stoicism",
+      "category": ["mind"],
+      "origin": "Epictetus, Enchiridion",
+      "description": "A core Stoic exercise: explicitly sorting a worry into 'within my control' vs. 'not within my control' to reduce anxious rumination.",
+      "steps": [
+        "When a worry arises, write it down plainly.",
+        "List what parts of it are within your control (your actions, effort, responses).",
+        "List what parts are not (others' opinions, outcomes, the past).",
+        "Redirect energy only toward the controllable list; consciously let go of effort on the rest."
+      ],
+      "duration": "5-10 min",
+      "benefits": ["Reduces anxious rumination", "Focuses energy productively", "Emotional clarity"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "stoic-evening-review",
+      "title": "Evening Review",
+      "tradition": "stoicism",
+      "category": ["mind"],
+      "origin": "Seneca, and Marcus Aurelius's Meditations",
+      "description": "A nightly reflection practice reviewing the day's actions honestly, without harsh self-judgment, to build self-awareness over time.",
+      "steps": [
+        "At the end of the day, ask: What did I do well today? Where did I fall short? What will I do differently tomorrow?",
+        "Write brief honest answers (a few sentences each is enough).",
+        "Avoid self-punishment — the goal is clear-eyed observation, not guilt.",
+        "Keep entries in one place to notice patterns over weeks."
+      ],
+      "duration": "5-10 min",
+      "benefits": ["Builds self-awareness", "Supports behavior change", "Closes the day with clarity"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "stoic-negative-visualization",
+      "title": "Negative Visualization (Premeditatio Malorum)",
+      "tradition": "stoicism",
+      "category": ["mind"],
+      "origin": "Seneca",
+      "description": "Briefly imagining the loss of something you value, not to induce fear, but to build genuine gratitude and reduce complacency.",
+      "steps": [
+        "Choose something you have that you often take for granted (health, a relationship, your routine).",
+        "Spend 2-3 minutes imagining life without it, briefly and without dwelling in distress.",
+        "Return attention to the present, noticing gratitude for what is actually here now.",
+        "Use sparingly (a few times a week), not as constant anxious rehearsal."
+      ],
+      "duration": "3-5 min",
+      "benefits": ["Builds gratitude", "Reduces complacency", "Perspective on setbacks"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "nordic-cold-exposure",
+      "title": "Cold Water Immersion",
+      "tradition": "nordic-sami",
+      "category": ["body"],
+      "origin": "Nordic bathing culture (avanto/ice swimming)",
+      "description": "Brief immersion in cold water, traditionally paired with sauna heat, used for circulation, mood, and resilience-building.",
+      "steps": [
+        "If new to this, start with cold showers (30-60 seconds) rather than full immersion.",
+        "If doing sauna-to-cold contrast, warm thoroughly first, then immerse briefly (start with seconds, not minutes).",
+        "Breathe slowly and steadily through the initial shock rather than gasping.",
+        "Warm up gradually afterward with movement or dry layers rather than immediately re-heating artificially.",
+        "Note: consult a doctor first if you have cardiovascular conditions."
+      ],
+      "duration": "1-5 min",
+      "benefits": ["Improves mood", "Builds stress resilience", "Boosts circulation"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "nordic-sauna-social",
+      "title": "Sauna as Communal Reset",
+      "tradition": "nordic-sami",
+      "category": ["body", "mind"],
+      "origin": "Finnish/Nordic sauna culture",
+      "description": "Regular sauna use, traditionally a communal and unhurried ritual, used for both physical recovery and social/mental decompression.",
+      "steps": [
+        "Set aside unhurried time (20-30 min minimum) rather than treating it as a quick errand.",
+        "Sit in the heat in a few rounds (e.g. 10-15 min), cooling down between rounds with fresh air or a cool shower.",
+        "If possible, share the space with others without phones — this is traditionally a social, conversational ritual, not a solitary one.",
+        "Hydrate well before and after."
+      ],
+      "duration": "20-40 min",
+      "benefits": ["Physical recovery", "Stress reduction", "Social connection"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "sami-light-rhythm",
+      "title": "Seasonal Light Rhythm Adjustment",
+      "tradition": "nordic-sami",
+      "category": ["mind", "body"],
+      "origin": "Sámi Arctic living tradition",
+      "description": "A practice of consciously adjusting activity and rest to extreme seasonal light/dark cycles rather than fighting them, traditional to Arctic Indigenous life.",
+      "steps": [
+        "In dark winter months, prioritize getting bright light (outdoor or a light lamp) in the first hour of waking.",
+        "Accept a naturally slower, more restful pace in deep winter rather than forcing summer-level output.",
+        "In bright summer months, use blackout coverings to protect sleep despite long daylight.",
+        "Build in deliberate rest/reflection blocks during low-light seasons rather than treating them as 'lost' time."
+      ],
+      "duration": "ongoing/seasonal",
+      "benefits": ["Supports circadian health", "Reduces seasonal mood dips", "Sustainable energy across the year"],
+      "difficulty": "intermediate"
+    },
+    {
+      "id": "yoruba-drum-release",
+      "title": "Rhythmic Movement / Drum Release",
+      "tradition": "west-african-yoruba",
+      "category": ["body", "mind"],
+      "origin": "Yoruba and broader West African communal ritual tradition",
+      "description": "Using rhythm (drumming, clapping, or dancing to rhythmic music) as a traditional means of emotional release and communal bonding.",
+      "steps": [
+        "Play rhythmic music (drum-based if possible) and allow the body to move freely without choreography.",
+        "Focus on releasing a specific stored emotion (grief, frustration) through movement rather than performing for appearance.",
+        "If in a group setting, let the rhythm synchronize the group rather than each person moving in isolation.",
+        "Close with a few still, quiet breaths to transition back to calm."
+      ],
+      "duration": "10-20 min",
+      "benefits": ["Emotional release", "Physical energy discharge", "Communal bonding"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "yoruba-ancestral-gratitude",
+      "title": "Ancestral Gratitude Reflection",
+      "tradition": "west-african-yoruba",
+      "category": ["mind"],
+      "origin": "Yoruba and broader West African ancestral-honoring traditions",
+      "description": "A reflective practice of acknowledging those who came before you, traditionally used to build a sense of continuity, resilience, and belonging.",
+      "steps": [
+        "Sit quietly and bring to mind a family member or ancestor (known or unknown by name) whose effort contributed to your life.",
+        "Silently or aloud, acknowledge specifically what you believe they endured or gave.",
+        "Consider one value or strength you carry that may trace back to them.",
+        "Close by stating an intention to carry that forward."
+      ],
+      "duration": "5-10 min",
+      "benefits": ["Sense of belonging", "Resilience", "Perspective beyond the individual self"],
+      "difficulty": "beginner"
+    },
+    {
+      "id": "west-african-communal-meal",
+      "title": "Communal Meal Practice",
+      "tradition": "west-african-yoruba",
+      "category": ["diet", "mind"],
+      "origin": "West African communal eating tradition",
+      "description": "Eating from a shared dish/table as a deliberate communal act, traditionally reinforcing social bonds alongside nourishment.",
+      "steps": [
+        "Where possible, eat at least one meal a day with others rather than alone or on a screen.",
+        "Use the meal as a time for conversation and presence, not multitasking.",
+        "If eating from shared dishes, let this reinforce a sense of trust and connection rather than rushing.",
+        "Express thanks aloud to whoever prepared the food."
+      ],
+      "duration": "per meal",
+      "benefits": ["Social connection", "Slower, more mindful eating", "Reduced isolation"],
+      "difficulty": "beginner"
+    }
+  ]
+}

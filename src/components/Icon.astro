@@ -1,0 +1,19 @@
+---
+/* Small set of lucide-style inline icons — no icon library JS. */
+interface Props { name: string; size?: number; class?: string }
+const { name, size = 20, class: className } = Astro.props;
+const s = {
+  fill: 'none', stroke: 'currentColor', 'stroke-width': '2',
+  'stroke-linecap': 'round' as const, 'stroke-linejoin': 'round' as const,
+};
+---
+<svg viewBox="0 0 24 24" width={size} height={size} class={className} aria-hidden="true" focusable="false" {...s}>
+  {name === 'leaf' && <><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6"/></>}
+  {name === 'search' && <><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></>}
+  {name === 'clock' && <><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></>}
+  {name === 'map-pin' && <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>}
+  {name === 'info' && <><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></>}
+  {name === 'arrow-right' && <><path d="M5 12h14M12 5l7 7-7 7"/></>}
+  {name === 'arrow-left' && <><path d="M19 12H5M12 19l-7-7 7-7"/></>}
+  {name === 'timer' && <><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></>}
+</svg>

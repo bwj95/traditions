@@ -1,0 +1,43 @@
+---
+import { Image } from 'astro:assets';
+import { getTradition, type Technique } from '../data/content';
+import { techniqueImage } from '../data/images';
+import { url, catHue } from '../utils';
+import DifficultyBadge from './DifficultyBadge.astro';
+import Emblem from './Emblem.astro';
+import Icon from './Icon.astro';
+
+interface Props { technique: Technique; showTradition?: boolean }
+const { technique, showTradition = true } = Astro.props;
+const trad = getTradition(technique.tradition);
+const img = techniqueImage(technique.id);
+---
+<article class="tech-card">
+  <a href={url(`technique/${technique.id}`)} class="tech-card-link">
+    {img && (
+      <div class="tech-card-media">
+        <Image src={img} alt={technique.title} widths={[320, 480, 640]} quality={68}
+          sizes="(max-width: 720px) 90vw, 320px" loading="lazy" />
+      </div>
+    )}
+    <div class="tech-card-inner">
+      <div class="tech-card-cats">
+        {technique.category.map((c) => (
+          <span class="badge cat-badge" style={`--badge-hue:${catHue[c] ?? 220}`}>{c}</span>
+        ))}
+      </div>
+      <h3 class="tech-card-title">{technique.title}</h3>
+      {showTradition && trad && (
+        <p class="tech-card-trad">
+          <Emblem id={trad.id} size={15} class="trad-inline-emblem" />
+          {trad.name}
+        </p>
+      )}
+      <p class="tech-card-desc">{technique.description}</p>
+      <div class="tech-card-meta">
+        <span class="meta-item"><Icon name="clock" size={14} /> {technique.duration}</span>
+        <DifficultyBadge level={technique.difficulty} />
+      </div>
+    </div>
+  </a>
+</article>

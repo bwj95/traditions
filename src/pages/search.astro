@@ -1,0 +1,79 @@
+---
+import Base from '../layouts/Base.astro';
+import { searchIndex } from '../data/content';
+import { url } from '../utils';
+import Icon from '../components/Icon.astro';
+
+const base = url();
+---
+<Base title="Search practices — Traditions" description="Search across every technique by title, tradition, category, and benefit.">
+  <header class="page-header">
+    <h1>Search practices</h1>
+    <div class="search-box">
+      <Icon name="search" size={18} />
+      <input id="q" type="search" autofocus placeholder="Try “breath”, “anxiety”, “Zen”, “sleep”…" aria-label="Search practices" />
+    </div>
+  </header>
+
+  <p id="hint" class="empty-note">Start typing to search across titles, traditions, categories, and benefits.</p>
+  <p id="count" class="search-count" hidden></p>
+  <div id="results" class="card-grid"></div>
+
+  <script is:inline define:vars={{ index: searchIndex, base }}>
+    const hues = { mind: 258, body: 152, breath: 199, diet: 28 };
+    const input = document.getElementById('q');
+    const results = document.getElementById('results');
+    const hint = document.getElementById('hint');
+    const count = document.getElementById('count');
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+    function card(t) {
+      const cats = t.category
+        .map((c) => `<span class="badge cat-badge" style="--badge-hue:${hues[c] ?? 220}">${c}</span>`)
+        .join('');
+      return `<article class="tech-card"><a href="${base}technique/${t.id}" class="tech-card-link">
+        <div class="tech-card-inner">
+          <div class="tech-card-cats">${cats}</div>
+          <h3 class="tech-card-title">${esc(t.title)}</h3>
+          <p class="tech-card-trad">${esc(t.traditionName)}</p>
+          <p class="tech-card-desc">${esc(t.description)}</p>
+          <div class="tech-card-meta">
+            <span class="meta-item">${esc(t.duration)}</span>
+            <span class="badge diff-badge diff-${t.difficulty}">${t.difficulty}</span>
+          </div>
+        </div></a></article>`;
+    }
+
+    function run(q) {
+      const query = q.trim().toLowerCase();
+      // Keep the URL shareable.
+      const u = new URL(location.href);
+      if (query) u.searchParams.set('q', q.trim()); else u.searchParams.delete('q');
+      history.replaceState(null, '', u);
+
+      if (!query) {
+        hint.hidden = false;
+        hint.textContent = 'Start typing to search across titles, traditions, categories, and benefits.';
+        count.hidden = true; results.innerHTML = '';
+        return;
+      }
+      const matches = index.filter((t) => t.haystack.includes(query));
+      if (matches.length === 0) {
+        hint.hidden = false;
+        hint.textContent = `No practices match “${q.trim()}”. Try a broader term.`;
+        count.hidden = true; results.innerHTML = '';
+        return;
+      }
+      hint.hidden = true;
+      count.hidden = false;
+      count.textContent = `${matches.length} ${matches.length === 1 ? 'result' : 'results'}`;
+      results.innerHTML = matches.map(card).join('');
+    }
+
+    input.addEventListener('input', (e) => run(e.target.value));
+    const seed = new URL(location.href).searchParams.get('q') || '';
+    if (seed) { input.value = seed; run(seed); }
+    input.focus();
+  </script>
+</Base>

@@ -1,0 +1,79 @@
+---
+import '../styles/global.css';
+import { categories, categoryMeta } from '../data/content';
+import { url } from '../utils';
+import Icon from '../components/Icon.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  /** category id when a category page is active, for nav highlighting */
+  activeCategory?: string;
+}
+const {
+  title = 'Traditions — a world wellness guide',
+  description = 'Nine wellness traditions and their techniques — meditation, movement, breath, and food-as-medicine — honored where they come from.',
+  activeCategory,
+} = Astro.props;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#6b7d5a" />
+    <link rel="icon" href={url('favicon.svg')} type="image/svg+xml" />
+    <link rel="preload" href={url('fonts/sentient-500.woff2')} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={url('fonts/general-sans-400.woff2')} as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <div class="app">
+      <header class="site-header">
+        <div class="wrap header-inner">
+          <a href={url()} class="brand">
+            <Icon name="leaf" size={20} class="brand-mark" />
+            <span>Traditions</span>
+          </a>
+          <nav class="cat-nav" aria-label="Categories">
+            {categories.map((c) => (
+              <a href={url(c)} class="cat-link" aria-current={activeCategory === c ? 'page' : undefined}>
+                {categoryMeta[c].label}
+              </a>
+            ))}
+          </nav>
+          <form class="search-mini" action={url('search')} method="get" role="search">
+            <Icon name="search" size={16} />
+            <input type="search" name="q" placeholder="Search practices…" aria-label="Search practices" />
+          </form>
+        </div>
+      </header>
+
+      <main class="wrap main">
+        <slot />
+      </main>
+
+      <footer class="site-footer">
+        <div class="wrap">
+          <div class="footer-links">
+            <a href={url()}>Home</a>
+            <a href={url('search')}>Search</a>
+            <a href={url('credits')}>Image credits</a>
+          </div>
+          <p class="disclaimer">
+            These practices are shared for educational and wellness purposes and are
+            not a substitute for professional medical or mental health care.
+          </p>
+          <p class="attribution">
+            Each practice carries an attribution to the tradition it comes from —
+            honoring its origin is part of the point.
+          </p>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

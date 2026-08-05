@@ -1,0 +1,14 @@
+---
+import { categoryMeta, type CategoryId } from '../data/content';
+import { url } from '../utils';
+interface Props { category: CategoryId; asLink?: boolean }
+const { category, asLink = true } = Astro.props;
+const meta = categoryMeta[category];
+---
+{meta && (asLink ? (
+  <a href={url(category)} class="badge-link">
+    <span class="badge cat-badge" style={`--badge-hue:${meta.hue}`}>{meta.label}</span>
+  </a>
+) : (
+  <span class="badge cat-badge" style={`--badge-hue:${meta.hue}`}>{meta.label}</span>
+))}

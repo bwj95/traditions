@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import { credits, hasCredits } from '../data/credits';
+import { url } from '../utils';
+import Icon from '../components/Icon.astro';
+
+const entries = Object.entries(credits);
+---
+<Base title="Image credits — Traditions" description="Sources and licenses for the photography used across the guide.">
+  <a href={url()} class="back-link"><Icon name="arrow-left" size={16} /> Home</a>
+  <header class="page-header">
+    <p class="eyebrow">Credits</p>
+    <h1>Image credits</h1>
+    <p class="page-lede">
+      Every photograph here is used under a license that permits it, and credited to
+      its source. Honoring where things come from — practices and pictures alike — is
+      part of the point.
+    </p>
+  </header>
+
+  {hasCredits() ? (
+    <ul class="credit-list">
+      {entries.map(([key, c]) => (
+        <li class="credit-item">
+          <strong>{c.title}</strong>
+          {c.author && <> — {c.author}</>}
+          {c.sourceName && (
+            <> · {c.source ? <a href={c.source} rel="noopener">{c.sourceName}</a> : c.sourceName}</>
+          )}
+          {c.license && (
+            <> · {c.licenseUrl ? <a href={c.licenseUrl} rel="noopener">{c.license}</a> : c.license}</>
+          )}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <p class="empty-note">
+      Photography is being curated. Illustrative emblems are original line art created
+      for this guide.
+    </p>
+  )}
+</Base>

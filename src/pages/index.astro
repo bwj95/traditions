@@ -1,0 +1,57 @@
+---
+import Base from '../layouts/Base.astro';
+import {
+  categories, categoryMeta, categoryCounts, traditions, quickResets, techniques,
+} from '../data/content';
+import { url } from '../utils';
+import TechniqueCard from '../components/TechniqueCard.astro';
+import TraditionCard from '../components/TraditionCard.astro';
+import CategoryIcon from '../components/CategoryIcon.astro';
+import Icon from '../components/Icon.astro';
+---
+<Base>
+  <section class="hero">
+    <div class="hero-glow" aria-hidden="true"></div>
+    <h1>Time-tested ways to feel <em>better</em>.</h1>
+    <p class="hero-sub">
+      {techniques.length} practices drawn from {traditions.length} of the world's
+      wellness traditions — for the mind, the body, the breath, and the table.
+      Browse by what you need, or by where it comes from.
+    </p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Browse by category</h2>
+    <div class="cat-grid">
+      {categories.map((c) => {
+        const meta = categoryMeta[c];
+        return (
+          <a href={url(c)} class="cat-tile" style={`--badge-hue:${meta.hue}`}>
+            <CategoryIcon category={c} size={22} class="cat-tile-icon" />
+            <span class="cat-tile-count">{categoryCounts[c]}</span>
+            <h3>{meta.label}</h3>
+            <p>{meta.blurb}</p>
+            <span class="cat-tile-go">Explore <Icon name="arrow-right" size={16} /></span>
+          </a>
+        );
+      })}
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
+      <p class="section-note">Quick practices you can finish in about five minutes.</p>
+    </div>
+    <div class="card-grid">
+      {quickResets.map((t) => <TechniqueCard technique={t} />)}
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">Browse by tradition</h2>
+    <div class="trad-grid">
+      {traditions.map((tr) => <TraditionCard tradition={tr} />)}
+    </div>
+  </section>
+</Base>

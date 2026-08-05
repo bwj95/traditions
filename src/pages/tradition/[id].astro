@@ -1,0 +1,53 @@
+---
+import { Image } from 'astro:assets';
+import Base from '../../layouts/Base.astro';
+import { traditions, getTradition, techniquesByTradition } from '../../data/content';
+import { traditionHero } from '../../data/images';
+import { url } from '../../utils';
+import TechniqueCard from '../../components/TechniqueCard.astro';
+import Emblem from '../../components/Emblem.astro';
+import Icon from '../../components/Icon.astro';
+
+export function getStaticPaths() {
+  return traditions.map((t) => ({ params: { id: t.id } }));
+}
+
+const { id } = Astro.params;
+const tradition = getTradition(id)!;
+const items = techniquesByTradition(id);
+const hero = traditionHero(id);
+---
+<Base title={`${tradition.name} — Traditions`} description={tradition.blurb}>
+  <a href={url()} class="back-link"><Icon name="arrow-left" size={16} /> All traditions</a>
+
+  {hero ? (
+    <div class="trad-banner">
+      <Image src={hero} alt={tradition.name} widths={[640, 960, 1280]} quality={68}
+        sizes="(max-width: 1120px) 100vw, 1120px" loading="eager" fetchpriority="high" />
+      <div class="banner-inner">
+        <Emblem id={tradition.id} size={44} class="banner-emblem" />
+        <p class="eyebrow">Tradition</p>
+        <h1>{tradition.name}</h1>
+        <p class="banner-region"><Icon name="map-pin" size={15} /> {tradition.region}</p>
+      </div>
+    </div>
+  ) : (
+    <div class="trad-banner trad-banner--emblem">
+      <div class="banner-inner">
+        <Emblem id={tradition.id} size={56} class="banner-emblem" />
+        <p class="eyebrow">Tradition</p>
+        <h1>{tradition.name}</h1>
+        <p class="banner-region"><Icon name="map-pin" size={15} /> {tradition.region}</p>
+      </div>
+    </div>
+  )}
+
+  <header class="page-header">
+    <p class="page-lede">{tradition.blurb}</p>
+    <p class="count-note">{items.length} practices</p>
+  </header>
+
+  <div class="card-grid">
+    {items.map((t) => <TechniqueCard technique={t} showTradition={false} />)}
+  </div>
+</Base>

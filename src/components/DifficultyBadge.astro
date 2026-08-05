@@ -1,0 +1,5 @@
+---
+interface Props { level: string }
+const { level } = Astro.props;
+---
+<span class={`badge diff-badge diff-${level}`}>{level}</span>
