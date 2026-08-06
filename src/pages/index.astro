@@ -49,13 +49,20 @@ import Icon from '../components/Icon.astro';
     </div>
 
     <div class="reset-banner">
-      <div class="reset-marquee" aria-hidden="true">
+      <div class="reset-marquee">
         <div class="reset-marquee-track">
-          {[0, 1].map(() =>
+          {/* Each item links to its technique; the second copy only exists for
+              the seamless loop, so it's hidden from AT and the tab order. */}
+          {[false, true].map((dup) =>
             quickResets.map((t) => (
-              <span class="reset-marquee-item">
+              <a
+                href={url(`technique/${t.id}`)}
+                class="reset-marquee-item"
+                aria-hidden={dup ? 'true' : undefined}
+                tabindex={dup ? -1 : undefined}
+              >
                 {t.title}<span class="reset-marquee-dot">✦</span>
-              </span>
+              </a>
             )),
           )}
         </div>

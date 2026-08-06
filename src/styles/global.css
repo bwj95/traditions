@@ -162,7 +162,16 @@ img { max-width: 100%; display: block; }
 .attribution { margin: 0; font-size: 0.82rem; color: var(--text-faint); }
 
 /* ---------- Home hero ---------- */
-.hero { position: relative; padding: 40px 0 24px; max-width: 760px; }
+/* Fills the first screen: copy floats mid-viewport, the space below stays
+   empty so the meadow grass reads as part of the home screen. Categories
+   start just past the fold. svh with vh fallback. */
+.hero {
+  position: relative; padding: 24px 0; max-width: 760px;
+  min-height: calc(100vh - 190px);
+  min-height: calc(100svh - 190px);
+  display: flex; flex-direction: column; justify-content: center;
+  padding-bottom: 8vh;
+}
 .hero > *:not(.hero-glow) { position: relative; z-index: 1; }
 .hero-glow {
   position: absolute; inset: -60px -25% auto -12%; height: 380px;
@@ -360,7 +369,11 @@ img { max-width: 100%; display: block; }
   border-radius: 999px; box-shadow: var(--shadow);
 }
 .reset-marquee {
-  flex: 1; overflow: hidden;
+  flex: 1;
+  min-width: 0; /* REQUIRED: clip isn't a scroll container, so min-width:auto
+                   would size to the track and shove the button off-screen */
+  overflow: hidden;
+  overflow: clip; /* clip > hidden: focus can't silently shift scrollLeft */
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
 }
@@ -368,11 +381,16 @@ img { max-width: 100%; display: block; }
   display: flex; width: max-content; align-items: center;
   animation: resetMarquee 36s linear infinite;
 }
+/* Items are links now — pause the reel while aiming so they're clickable. */
+.reset-marquee:hover .reset-marquee-track,
+.reset-marquee:focus-within .reset-marquee-track { animation-play-state: paused; }
 .reset-marquee-item {
   white-space: nowrap; display: inline-flex; align-items: center;
   font-size: 0.78rem; font-weight: 600; letter-spacing: 0.09em;
   text-transform: uppercase; color: var(--text-soft);
+  transition: color 0.15s;
 }
+.reset-marquee-item:hover { color: var(--accent); }
 .reset-marquee-dot { color: var(--accent); margin-inline: 14px; }
 @keyframes resetMarquee { to { transform: translateX(-50%); } }
 @media (prefers-reduced-motion: reduce) { .reset-marquee-track { animation: none; } }
@@ -385,8 +403,9 @@ img { max-width: 100%; display: block; }
 }
 .reset-expand:hover { filter: brightness(1.08); }
 @media (prefers-color-scheme: dark) { .reset-expand { color: #16150f; } }
-/* Collapsed: first three cards only (class added by JS; no-JS shows all) */
-.reset-grid.is-collapsed > :nth-child(n + 4) { display: none; }
+/* Collapsed: the banner is the whole section — no cards until "Show all"
+   (class added by JS; no-JS users just see every card) */
+.reset-grid.is-collapsed { display: none; }
 
 /* ---------- Meadow (grass strip along the viewport bottom) ---------- */
 .meadow {
