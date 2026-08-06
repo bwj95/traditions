@@ -1,0 +1,107 @@
+---
+/*
+ * Meadow — a strip of generated grass along the bottom of the viewport.
+ * Traditions' answer to the customizer's cursor-following dot glow: blades
+ * sway in an ambient breeze and gently part around the cursor, easing back
+ * like a light gust passed through.
+ *
+ * Canvas + JS on purpose (not scroll-driven/experimental CSS) so the core
+ * effect works in every engine. Decorative only: pointer-events none,
+ * aria-hidden, static single frame under prefers-reduced-motion, z-index -1
+ * so any element with a background (cards, footer, header) paints over it.
+ */
+---
+<canvas class="meadow" id="meadow" aria-hidden="true"></canvas>
+
+<script is:inline>
+  (() => {
+    const canvas = document.getElementById('meadow');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d');
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const darkMq = matchMedia('(prefers-color-scheme: dark)');
+
+    let W = 0, H = 0, top = 0, blades = [];
+    let mx = -1e4, my = -1e4; // cursor in canvas coords; parked offscreen
+
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    function makeBlades() {
+      const dark = darkMq.matches;
+      blades = [];
+      const n = Math.min(240, Math.round(W / 7));
+      for (let i = 0; i < n; i++) {
+        blades.push({
+          x: rand(0, W),
+          h: rand(H * 0.3, H * 0.92),
+          lean: rand(-0.22, 0.22), // natural resting bend
+          flex: rand(0.5, 1), // how much the breeze moves it
+          phase: rand(0, Math.PI * 2),
+          w: rand(1, 2.4),
+          bend: 0, // eased cursor bend
+          color: `hsla(${rand(88, 132)}, ${rand(22, 34)}%, ${
+            dark ? rand(44, 64) : rand(28, 46)
+          }%, ${dark ? rand(0.1, 0.22) : rand(0.14, 0.3)})`,
+        });
+      }
+    }
+
+    function resize() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = canvas.clientWidth;
+      H = canvas.clientHeight;
+      top = window.innerHeight - H;
+      canvas.width = Math.round(W * dpr);
+      canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      makeBlades();
+      if (reduceMotion) draw(0);
+    }
+
+    function draw(t) {
+      ctx.clearRect(0, 0, W, H);
+      ctx.lineCap = 'round';
+      for (const b of blades) {
+        // Ambient breeze: two travelling waves, offset per blade.
+        const wind = reduceMotion
+          ? 0
+          : (Math.sin(t * 0.0007 + b.x * 0.006 + b.phase) * 0.6 +
+              Math.sin(t * 0.00043 + b.x * 0.013 + b.phase * 1.7) * 0.4) *
+            0.35 * b.flex;
+
+        // Cursor: nearby blades bend away, then ease back (lerp = the "gently").
+        let target = 0;
+        const dx = b.x - mx;
+        const dy = H - my;
+        const d = Math.hypot(dx, dy);
+        const R = 150;
+        if (d < R) {
+          const fall = 1 - d / R;
+          target = (dx >= 0 ? 1 : -1) * fall * fall * 1.15;
+        }
+        b.bend += (target - b.bend) * (reduceMotion ? 1 : 0.09);
+
+        const sway = b.lean + wind + b.bend;
+        const tipX = b.x + sway * b.h * 0.5;
+        const tipY = H - b.h * (1 - Math.min(0.25, Math.abs(sway) * 0.18));
+        ctx.strokeStyle = b.color;
+        ctx.lineWidth = b.w;
+        ctx.beginPath();
+        ctx.moveTo(b.x, H + 2);
+        ctx.quadraticCurveTo(b.x + sway * b.h * 0.14, H - b.h * 0.55, tipX, tipY);
+        ctx.stroke();
+      }
+    }
+
+    window.addEventListener('resize', resize, { passive: true });
+    darkMq.addEventListener?.('change', () => { makeBlades(); if (reduceMotion) draw(0); });
+    window.addEventListener('pointermove', (e) => { mx = e.clientX; my = e.clientY - top; }, { passive: true });
+    window.addEventListener('pointerleave', () => { mx = -1e4; my = -1e4; }, { passive: true });
+
+    resize();
+    if (!reduceMotion) {
+      const loop = (t) => { draw(t); requestAnimationFrame(loop); };
+      requestAnimationFrame(loop);
+    }
+  })();
+</script>

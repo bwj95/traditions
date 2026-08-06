@@ -3,6 +3,7 @@ import '../styles/global.css';
 import { categories, categoryMeta } from '../data/content';
 import { url } from '../utils';
 import Icon from '../components/Icon.astro';
+import Meadow from '../components/Meadow.astro';
 
 interface Props {
   title?: string;
@@ -75,5 +76,25 @@ const {
         </div>
       </footer>
     </div>
+
+    <Meadow />
+
+    <script is:inline>
+      // Auto-hiding header: hide on scroll down, reappear on scroll up, always
+      // visible near the top. Same threshold pattern as the workbench nav.
+      (() => {
+        const header = document.querySelector('.site-header');
+        if (!header) return;
+        let lastY = window.scrollY;
+        const TH = 8; // px of travel before reacting — ignores scroll jitter
+        window.addEventListener('scroll', () => {
+          const y = window.scrollY;
+          if (y < 90) header.classList.remove('is-hidden');
+          else if (y > lastY + TH) header.classList.add('is-hidden');
+          else if (y < lastY - TH) header.classList.remove('is-hidden');
+          lastY = y;
+        }, { passive: true });
+      })();
+    </script>
   </body>
 </html>

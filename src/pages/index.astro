@@ -1,12 +1,14 @@
 ---
+import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import {
   categories, categoryMeta, categoryCounts, traditions, quickResets, techniques,
 } from '../data/content';
+import { traditionTile } from '../data/images';
 import { url } from '../utils';
 import TechniqueCard from '../components/TechniqueCard.astro';
-import TraditionCard from '../components/TraditionCard.astro';
 import CategoryIcon from '../components/CategoryIcon.astro';
+import Emblem from '../components/Emblem.astro';
 import Icon from '../components/Icon.astro';
 ---
 <Base>
@@ -20,14 +22,15 @@ import Icon from '../components/Icon.astro';
     </p>
   </section>
 
+  {/* Category tiles pin & stack as you scroll (workbench Stack layout). */}
   <section class="section">
     <h2 class="section-title">Browse by category</h2>
-    <div class="cat-grid">
+    <div class="cat-grid cat-grid--stack">
       {categories.map((c) => {
         const meta = categoryMeta[c];
         return (
           <a href={url(c)} class="cat-tile" style={`--badge-hue:${meta.hue}`}>
-            <CategoryIcon category={c} size={22} class="cat-tile-icon" />
+            <CategoryIcon category={c} size={26} class="cat-tile-icon" />
             <span class="cat-tile-count">{categoryCounts[c]}</span>
             <h3>{meta.label}</h3>
             <p>{meta.blurb}</p>
@@ -38,20 +41,100 @@ import Icon from '../components/Icon.astro';
     </div>
   </section>
 
+  {/* Marquee banner + collapsed grid; the button reveals all of them. */}
   <section class="section">
     <div class="section-head">
       <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
       <p class="section-note">Quick practices you can finish in about five minutes.</p>
     </div>
-    <div class="card-grid">
+
+    <div class="reset-banner">
+      <div class="reset-marquee" aria-hidden="true">
+        <div class="reset-marquee-track">
+          {[0, 1].map(() =>
+            quickResets.map((t) => (
+              <span class="reset-marquee-item">
+                {t.title}<span class="reset-marquee-dot">✦</span>
+              </span>
+            )),
+          )}
+        </div>
+      </div>
+      <button class="reset-expand" id="reset-expand" aria-expanded="false" aria-controls="reset-grid">
+        Show all {quickResets.length}
+      </button>
+    </div>
+
+    <div class="card-grid reset-grid" id="reset-grid">
       {quickResets.map((t) => <TechniqueCard technique={t} />)}
     </div>
+
+    <script is:inline>
+      // Collapse immediately (inline, pre-paint). Without JS all cards just show.
+      (() => {
+        const grid = document.getElementById('reset-grid');
+        const btn = document.getElementById('reset-expand');
+        if (!grid || !btn) return;
+        const total = grid.children.length;
+        grid.classList.add('is-collapsed');
+        btn.addEventListener('click', () => {
+          const collapsed = grid.classList.toggle('is-collapsed');
+          btn.setAttribute('aria-expanded', String(!collapsed));
+          btn.textContent = collapsed ? `Show all ${total}` : 'Show fewer';
+        });
+      })();
+    </script>
   </section>
 
+  {/* Traditions as a numbered editorial index (workbench Index layout);
+      a floating photo preview follows the cursor over each row. */}
   <section class="section">
     <h2 class="section-title">Browse by tradition</h2>
-    <div class="trad-grid">
-      {traditions.map((tr) => <TraditionCard tradition={tr} />)}
-    </div>
+    <ol class="trad-index">
+      {traditions.map((tr, i) => {
+        const img = traditionTile(tr.id);
+        return (
+          <li>
+            <a href={url(`tradition/${tr.id}`)} class="trad-row">
+              <span class="trad-row-num">{String(i + 1).padStart(2, '0')}</span>
+              <Emblem id={tr.id} size={20} class="trad-row-emblem" />
+              <span class="trad-row-name">{tr.name}</span>
+              <span class="trad-row-region">{tr.region}</span>
+              <span class="trad-row-go"><Icon name="arrow-right" size={16} /></span>
+              {img && (
+                <span class="trad-row-thumb" aria-hidden="true">
+                  <Image src={img} alt="" widths={[480]} sizes="300px" quality={68} loading="lazy" />
+                </span>
+              )}
+            </a>
+          </li>
+        );
+      })}
+    </ol>
+    <div class="workprev" id="workprev" aria-hidden="true"></div>
+
+    <script is:inline>
+      // Floating hover preview — clones the row's hidden photo and follows the
+      // cursor. Mouse-only (pointer: fine); touch simply navigates.
+      (() => {
+        const prev = document.getElementById('workprev');
+        if (!prev || !matchMedia('(pointer: fine)').matches) return;
+        document.querySelectorAll('.trad-row').forEach((row) => {
+          const img = row.querySelector('.trad-row-thumb img');
+          if (!img) return;
+          row.addEventListener('pointerenter', () => {
+            const clone = img.cloneNode(true);
+            clone.loading = 'eager'; // source sits in a display:none span
+            prev.replaceChildren(clone);
+            prev.classList.add('show');
+          });
+          row.addEventListener('pointermove', (e) => {
+            prev.style.left = e.clientX + 'px';
+            prev.style.top = e.clientY + 'px';
+          });
+          row.addEventListener('pointerleave', () => prev.classList.remove('show'));
+        });
+      })();
+    </script>
   </section>
 </Base>

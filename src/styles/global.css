@@ -111,13 +111,15 @@ img { max-width: 100%; display: block; }
 .app { min-height: 100vh; display: flex; flex-direction: column; }
 .main { flex: 1; padding-block: 40px 80px; }
 
-/* ---------- Header ---------- */
+/* ---------- Header (auto-hides on scroll down, returns on scroll up) ---------- */
 .site-header {
   position: sticky; top: 0; z-index: 30;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: saturate(140%) blur(12px);
   border-bottom: 1px solid var(--border);
+  transition: transform 0.35s ease;
 }
+.site-header.is-hidden { transform: translateY(-100%); }
 .header-inner { display: flex; align-items: center; gap: 20px; height: 64px; }
 .brand {
   display: flex; align-items: center; gap: 9px;
@@ -232,6 +234,30 @@ img { max-width: 100%; display: block; }
   .cat-tile-icon { color: hsl(var(--badge-hue) 45% 68%); }
 }
 
+/* Stack variant (workbench "Stack" work layout): cards pin & pile up as you
+   scroll — position:sticky with stepped top offsets, opaque bodies so each
+   new card slides over the pinned one. */
+.cat-grid--stack { display: block; max-width: 780px; margin-inline: auto; }
+.cat-grid--stack .cat-tile {
+  position: sticky;
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 230px; margin: 0 auto 1.5rem; padding: 30px 36px;
+  box-shadow: 0 -10px 40px rgba(43, 42, 38, 0.16);
+}
+@media (prefers-color-scheme: dark) {
+  .cat-grid--stack .cat-tile { box-shadow: 0 -12px 44px rgba(0, 0, 0, 0.5); }
+}
+.cat-grid--stack .cat-tile:nth-child(1) { top: 88px; }
+.cat-grid--stack .cat-tile:nth-child(2) { top: 104px; }
+.cat-grid--stack .cat-tile:nth-child(3) { top: 120px; }
+.cat-grid--stack .cat-tile:nth-child(4) { top: 136px; }
+.cat-grid--stack .cat-tile h3 { font-size: 1.9rem; }
+.cat-grid--stack .cat-tile p { font-size: 1.02rem; max-width: 48ch; }
+.cat-grid--stack .cat-tile-count { font-size: 2.6rem; top: 22px; right: 30px; }
+@media (max-width: 720px) {
+  .cat-grid--stack .cat-tile { min-height: 190px; padding: 24px 26px; }
+}
+
 /* ---------- Tradition cards (image-forward) ---------- */
 .trad-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
@@ -282,6 +308,92 @@ img { max-width: 100%; display: block; }
 .trad-card-body h3 { margin: 0 0 4px; font-size: 1.2rem; }
 .trad-card-body p { margin: 0; color: var(--text-soft); font-size: 0.9rem; }
 .trad-card-emblem { color: var(--accent); flex-shrink: 0; }
+
+/* ---------- Tradition index (workbench "Index" work layout) ----------
+   Numbered editorial rows; a floating photo preview follows the cursor. */
+.trad-index { list-style: none; margin: 0; padding: 0; }
+.trad-index li { border-top: 1px solid var(--border); }
+.trad-index li:last-child { border-bottom: 1px solid var(--border); }
+.trad-row {
+  display: flex; align-items: center; gap: clamp(14px, 3vw, 28px);
+  padding: clamp(16px, 2.6vw, 24px) 6px;
+  transition: transform 0.3s ease;
+}
+.trad-row:hover { transform: translateX(10px); }
+.trad-row-num {
+  flex: 0 0 auto; font-size: 0.78rem; font-weight: 600;
+  letter-spacing: 0.08em; color: var(--text-faint);
+}
+.trad-row-emblem { flex: 0 0 auto; color: var(--accent); }
+.trad-row-name {
+  font-family: var(--font-display);
+  font-size: clamp(1.25rem, 3vw, 1.9rem); line-height: 1.15;
+  transition: color 0.2s ease;
+}
+.trad-row:hover .trad-row-name { color: var(--accent); }
+.trad-row-region {
+  margin-left: auto; flex: 0 0 auto;
+  color: var(--text-soft); font-size: 0.86rem;
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.trad-row-go { flex: 0 0 auto; color: var(--text-faint); transition: color 0.2s, transform 0.2s; }
+.trad-row:hover .trad-row-go { color: var(--accent); transform: translateX(4px); }
+.trad-row-thumb { display: none; } /* holds the img the floating preview clones */
+
+/* Floating hover preview (follows the cursor; JS positions it) */
+.workprev {
+  position: fixed; top: 0; left: 0; z-index: 60;
+  width: 300px; aspect-ratio: 16 / 10; border-radius: 14px; overflow: hidden;
+  pointer-events: none; opacity: 0;
+  transform: translate(-50%, -118%) scale(0.9) rotate(-3deg);
+  transition: opacity 0.25s ease, transform 0.3s ease;
+  box-shadow: var(--shadow-lift); border: 1px solid var(--border-strong);
+}
+.workprev.show { opacity: 1; transform: translate(-50%, -112%) scale(1) rotate(-1.2deg); }
+.workprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+/* ---------- 5-Minute Reset banner (marquee + expand) ---------- */
+.reset-banner {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 9px 9px 18px; margin-bottom: 20px;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: 999px; box-shadow: var(--shadow);
+}
+.reset-marquee {
+  flex: 1; overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.reset-marquee-track {
+  display: flex; width: max-content; align-items: center;
+  animation: resetMarquee 36s linear infinite;
+}
+.reset-marquee-item {
+  white-space: nowrap; display: inline-flex; align-items: center;
+  font-size: 0.78rem; font-weight: 600; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--text-soft);
+}
+.reset-marquee-dot { color: var(--accent); margin-inline: 14px; }
+@keyframes resetMarquee { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .reset-marquee-track { animation: none; } }
+.reset-expand {
+  flex: 0 0 auto; border: none; cursor: pointer;
+  padding: 8px 18px; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: 0.88rem; font-weight: 600;
+  transition: filter 0.15s;
+}
+.reset-expand:hover { filter: brightness(1.08); }
+@media (prefers-color-scheme: dark) { .reset-expand { color: #16150f; } }
+/* Collapsed: first three cards only (class added by JS; no-JS shows all) */
+.reset-grid.is-collapsed > :nth-child(n + 4) { display: none; }
+
+/* ---------- Meadow (grass strip along the viewport bottom) ---------- */
+.meadow {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  width: 100%; height: clamp(90px, 15vh, 150px);
+  z-index: -1; pointer-events: none;
+}
 
 /* ---------- Technique card grid ---------- */
 .card-grid {
@@ -467,4 +579,8 @@ img { max-width: 100%; display: block; }
   .search-mini input { width: 110px; }
   .detail-cols { grid-template-columns: 1fr; gap: 30px; }
   .trad-banner { min-height: 240px; }
+}
+@media (max-width: 560px) {
+  .trad-row-region { display: none; } /* keep index rows to name + arrow */
+  .trad-row { gap: 12px; }
 }
