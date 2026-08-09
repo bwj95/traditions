@@ -3,6 +3,7 @@ import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import {
   categories, categoryMeta, categoryCounts, traditions, quickResets, techniques,
+  techniquesByCategory,
 } from '../data/content';
 import { traditionTile } from '../data/images';
 import { url } from '../utils';
@@ -48,23 +49,84 @@ import StillWater from '../components/StillWater.astro';
     </p>
   </section>
 
-  {/* Category tiles pin & stack as you scroll (workbench Stack layout). */}
+  {/* Category tiles pin & stack as you scroll (workbench Stack layout), and
+      each one opens to reveal its practices without leaving the page.
+      The tile is a <div>, not an <a>: a toggle button can't legally live
+      inside a link, so the label and "Explore" carry the navigation. */}
   <section class="section">
     <h2 class="section-title">Browse by category</h2>
-    <div class="cat-grid cat-grid--stack">
+    <div class="cat-grid cat-grid--stack" id="cat-stack">
       {categories.map((c) => {
         const meta = categoryMeta[c];
+        const items = techniquesByCategory(c);
         return (
-          <a href={url(c)} class="cat-tile" style={`--badge-hue:${meta.hue}`}>
+          <div class="cat-tile" style={`--badge-hue:${meta.hue}`}>
             <CategoryIcon category={c} size={26} class="cat-tile-icon" />
             <span class="cat-tile-count">{categoryCounts[c]}</span>
-            <h3>{meta.label}</h3>
+            <h3><a href={url(c)} class="cat-tile-head">{meta.label}</a></h3>
             <p>{meta.blurb}</p>
-            <span class="cat-tile-go">Explore <Icon name="arrow-right" size={16} /></span>
-          </a>
+            <div class="cat-tile-actions">
+              <button
+                type="button"
+                class="cat-tile-toggle"
+                aria-expanded="false"
+                aria-controls={`cat-panel-${c}`}
+              >
+                <span data-open="Hide practices">Show {items.length} practices</span>
+                <Icon name="chevron-down" size={16} class="cat-tile-chev" />
+              </button>
+              <a href={url(c)} class="cat-tile-go">Explore <Icon name="arrow-right" size={16} /></a>
+            </div>
+            <div class="cat-tile-panel" id={`cat-panel-${c}`}>
+              <div class="cat-tile-panel-inner">
+                <div class="card-grid card-grid--tight">
+                  {items.map((t) => <TechniqueCard technique={t} />)}
+                </div>
+              </div>
+            </div>
+          </div>
         );
       })}
     </div>
+
+    <script is:inline>
+      // Accordion: one category open at a time. 48 cards across four tiles is a
+      // very long page otherwise, and the sticky stack has nowhere to put them.
+      (() => {
+        const stack = document.getElementById('cat-stack');
+        if (!stack) return;
+        const tiles = [...stack.querySelectorAll('.cat-tile')];
+        const setOpen = (tile, open) => {
+          const btn = tile.querySelector('.cat-tile-toggle');
+          tile.classList.toggle('is-open', open);
+          btn?.setAttribute('aria-expanded', String(open));
+        };
+        stack.addEventListener('click', (e) => {
+          const btn = e.target.closest('.cat-tile-toggle');
+          if (!btn) return;
+          const tile = btn.closest('.cat-tile');
+          const opening = btn.getAttribute('aria-expanded') !== 'true';
+          tiles.forEach((t) => setOpen(t, false));
+          if (opening) setOpen(tile, true);
+          // Sticky tiles can't hold a 20-card list — one taller than the
+          // viewport pins and the tiles below slide over its contents. While
+          // anything is open the whole stack drops to normal flow.
+          stack.classList.toggle('has-open', opening);
+          if (!opening) return;
+          // Keep the tile you just opened under the thumb instead of letting
+          // the reflow shove it off screen.
+          requestAnimationFrame(() => {
+            const top = tile.getBoundingClientRect().top;
+            if (top < 70 || top > window.innerHeight * 0.5) {
+              window.scrollTo({
+                top: window.scrollY + top - 96,
+                behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+              });
+            }
+          });
+        });
+      })();
+    </script>
   </section>
 
   {/* Collapsed grid; the button reveals all of them. The marquee that used to
@@ -105,13 +167,14 @@ import StillWater from '../components/StillWater.astro';
       a floating photo preview follows the cursor over each row. */}
   <section class="section">
     <h2 class="section-title">Browse by tradition</h2>
-    <ol class="trad-index">
-      {traditions.map((tr, i) => {
+    {/* <ul>, not <ol>: the order is shuffled per visit, so there's no rank to
+        number. No tradition gets to be permanently first. */}
+    <ul class="trad-index" id="trad-index">
+      {traditions.map((tr) => {
         const img = traditionTile(tr.id);
         return (
           <li>
             <a href={url(`tradition/${tr.id}`)} class="trad-row">
-              <span class="trad-row-num">{String(i + 1).padStart(2, '0')}</span>
               <Emblem id={tr.id} size={20} class="trad-row-emblem" />
               <span class="trad-row-name">{tr.name}</span>
               <span class="trad-row-region">{tr.region}</span>
@@ -125,7 +188,24 @@ import StillWater from '../components/StillWater.astro';
           </li>
         );
       })}
-    </ol>
+    </ul>
+
+    <script is:inline>
+      // Shuffle on every visit. Inline and immediately after the list so it
+      // runs before first paint — a shuffle in DOMContentLoaded would show the
+      // build-time order first and visibly reorder itself.
+      (() => {
+        const list = document.getElementById('trad-index');
+        if (!list) return;
+        const rows = [...list.children];
+        for (let i = rows.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1)); // Fisher-Yates
+          [rows[i], rows[j]] = [rows[j], rows[i]];
+        }
+        list.append(...rows); // append moves existing nodes; no clone, no relisten
+      })();
+    </script>
+
     <div class="workprev" id="workprev" aria-hidden="true"></div>
 
     <script is:inline>

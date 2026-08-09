@@ -360,6 +360,40 @@ img { max-width: 100%; display: block; }
 }
 .cat-tile h3 { margin: 0 0 6px; font-size: 1.4rem; }
 .cat-tile p { margin: 0 0 14px; color: var(--text-soft); font-size: 0.94rem; }
+.cat-tile-head { display: inline-block; }
+.cat-tile:hover .cat-tile-head { color: hsl(var(--badge-hue) 35% 40%); }
+@media (prefers-color-scheme: dark) {
+  .cat-tile:hover .cat-tile-head { color: hsl(var(--badge-hue) 45% 72%); }
+}
+.cat-tile-actions {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.cat-tile-toggle {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 8px 15px; border-radius: 999px;
+  background: hsl(var(--badge-hue) 45% 95%);
+  border: 1px solid hsl(var(--badge-hue) 40% 86%);
+  color: hsl(var(--badge-hue) 40% 32%);
+  font: inherit; font-size: 0.87rem; font-weight: 600;
+  transition: background 0.15s, border-color 0.15s;
+}
+.cat-tile-toggle:hover { background: hsl(var(--badge-hue) 48% 91%); }
+@media (prefers-color-scheme: dark) {
+  .cat-tile-toggle {
+    background: hsl(var(--badge-hue) 28% 20%);
+    border-color: hsl(var(--badge-hue) 26% 30%);
+    color: hsl(var(--badge-hue) 45% 76%);
+  }
+  .cat-tile-toggle:hover { background: hsl(var(--badge-hue) 30% 25%); }
+}
+.cat-tile-chev { transition: transform 0.25s ease; }
+.cat-tile-toggle[aria-expanded='true'] .cat-tile-chev { transform: rotate(180deg); }
+/* Swap the label off the same aria state that drives the chevron, so the
+   button text can't drift out of sync with what screen readers are told. */
+.cat-tile-toggle[aria-expanded='true'] span { font-size: 0; }
+.cat-tile-toggle[aria-expanded='true'] span::after {
+  content: attr(data-open); font-size: 0.87rem;
+}
 .cat-tile-go {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 0.88rem; font-weight: 600; color: hsl(var(--badge-hue) 35% 45%);
@@ -389,6 +423,30 @@ img { max-width: 100%; display: block; }
 .cat-grid--stack .cat-tile:nth-child(2) { top: 104px; }
 .cat-grid--stack .cat-tile:nth-child(3) { top: 120px; }
 .cat-grid--stack .cat-tile:nth-child(4) { top: 136px; }
+/* A sticky tile can't hold a 20-card list: once it's taller than the viewport
+   it pins and the tiles below slide up over its contents. While any tile is
+   open the whole stack drops back into normal flow. */
+.cat-grid--stack.has-open .cat-tile { position: relative; top: auto; }
+
+/* Collapsible panel. grid-template-rows 0fr -> 1fr animates to the content's
+   natural height, which a max-height guess can't do. visibility:hidden (not
+   just overflow) is what keeps the collapsed cards out of the tab order. */
+.cat-tile-panel {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s ease;
+}
+.cat-tile-panel-inner {
+  overflow: hidden; min-height: 0;
+  visibility: hidden;
+  transition: visibility 0s linear 0.38s;
+}
+.cat-tile.is-open .cat-tile-panel { grid-template-rows: 1fr; }
+.cat-tile.is-open .cat-tile-panel-inner { visibility: visible; transition-delay: 0s; }
+.cat-tile-panel-inner > * { padding-top: 22px; }
+@media (prefers-reduced-motion: reduce) {
+  .cat-tile-panel { transition: none; }
+  .cat-tile-panel-inner { transition: none; }
+}
 .cat-grid--stack .cat-tile h3 { font-size: 1.9rem; }
 .cat-grid--stack .cat-tile p { font-size: 1.02rem; max-width: 48ch; }
 .cat-grid--stack .cat-tile-count { font-size: 2.6rem; top: 22px; right: 30px; }
@@ -458,10 +516,6 @@ img { max-width: 100%; display: block; }
   transition: transform 0.3s ease;
 }
 .trad-row:hover { transform: translateX(10px); }
-.trad-row-num {
-  flex: 0 0 auto; font-size: 0.78rem; font-weight: 600;
-  letter-spacing: 0.08em; color: var(--text-faint);
-}
 .trad-row-emblem { flex: 0 0 auto; color: var(--accent); }
 .trad-row-name {
   font-family: var(--font-display);
@@ -511,7 +565,9 @@ img { max-width: 100%; display: block; }
 }
 .reset-marquee-track {
   display: flex; width: max-content; align-items: center;
-  animation: resetMarquee 36s linear infinite;
+  /* Half the original 36s — an unhurried drift suits the pace of the site, and
+     titles stay readable long enough to actually aim at one. */
+  animation: resetMarquee 72s linear infinite;
 }
 /* Items are links now — pause the reel while aiming so they're clickable. */
 .reset-marquee:hover .reset-marquee-track,
@@ -618,6 +674,12 @@ img { max-width: 100%; display: block; }
 .card-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 18px;
 }
+/* Inside a category tile. Must come AFTER .card-grid — both are single-class
+   selectors, so source order decides, and defining this earlier made it a
+   silent no-op. Columns deliberately inherit: at the tile's ~708px inner width
+   the 290px track gives two comfortable columns, and forcing three squeezed
+   titles like "Zhan Zhuang (Standing Meditation)" into shreds. */
+.card-grid--tight { gap: 14px; }
 .tech-card {
   background: var(--bg-elev); border: 1px solid var(--border);
   border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
