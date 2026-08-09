@@ -179,6 +179,93 @@ img { max-width: 100%; display: block; }
   font: inherit; font-size: 0.9rem; width: 150px; outline: none;
 }
 
+/* ---------- Mobile menu (hamburger + dropdown panel) ----------
+   Hidden above 720px, where .cat-nav shows the same links inline. */
+.nav-toggle {
+  display: none; /* flipped to grid in the 720px block */
+  flex: 0 0 auto; place-items: center;
+  width: 40px; height: 40px; padding: 0;
+  background: var(--bg-elev); border: 1px solid var(--border);
+  border-radius: 12px; color: var(--text); cursor: pointer;
+}
+.nav-toggle:hover { border-color: var(--border-strong); }
+.nav-toggle-bars { display: grid; gap: 4px; width: 18px; }
+.nav-toggle-bars span {
+  display: block; height: 2px; width: 100%; border-radius: 2px;
+  background: currentColor;
+  transition: transform 0.22s ease, opacity 0.18s ease;
+}
+/* Drive the X off aria-expanded — one source of truth for state, and the
+   styling can't drift out of sync with what screen readers are told. */
+.nav-toggle[aria-expanded='true'] { background: var(--accent); border-color: var(--accent); color: #fff; }
+@media (prefers-color-scheme: dark) {
+  .nav-toggle[aria-expanded='true'] { color: #16150f; }
+}
+.nav-toggle[aria-expanded='true'] .nav-toggle-bars span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+.nav-toggle[aria-expanded='true'] .nav-toggle-bars span:nth-child(2) { opacity: 0; }
+.nav-toggle[aria-expanded='true'] .nav-toggle-bars span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+@media (prefers-reduced-motion: reduce) { .nav-toggle-bars span { transition: none; } }
+
+/* Panel drops out of the header, so it inherits the sticky position and the
+   auto-hide transform. display:none when closed keeps its links out of the tab
+   order for free — no inert/visibility juggling. */
+.nav-panel {
+  display: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg-elev);
+  box-shadow: var(--shadow);
+  max-height: calc(100svh - var(--header-h) - 20px);
+  overflow-y: auto;
+}
+.nav-panel.is-open { display: block; }
+/* Progressive enhancement: allow-discrete + @starting-style animate an element
+   that starts at display:none. Engines without them just snap open — the menu
+   still works, so this stays an enhancement, not a core mechanic. */
+@media (prefers-reduced-motion: no-preference) {
+  .nav-panel {
+    opacity: 0; transform: translateY(-6px);
+    transition: opacity 0.2s ease, transform 0.2s ease, display 0.2s allow-discrete;
+  }
+  .nav-panel.is-open { opacity: 1; transform: none; }
+  @starting-style {
+    .nav-panel.is-open { opacity: 0; transform: translateY(-6px); }
+  }
+}
+.nav-panel-inner { display: grid; gap: 2px; padding-block: 10px 14px; }
+.nav-panel-link {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 12px; border-radius: 12px;
+  color: var(--text); font-weight: 500;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-panel-link:hover { background: var(--bg-sunken); }
+.nav-panel-link[aria-current='page'] { background: var(--accent); color: #fff; }
+.nav-panel-link[aria-current='page'] .nav-panel-count { background: rgba(255, 255, 255, 0.22); color: inherit; }
+@media (prefers-color-scheme: dark) {
+  .nav-panel-link[aria-current='page'] { color: #16150f; }
+  .nav-panel-link[aria-current='page'] .nav-panel-count { background: rgba(0, 0, 0, 0.18); }
+}
+.nav-panel-icon { flex: 0 0 auto; color: hsl(var(--badge-hue, 90) 42% 34%); }
+@media (prefers-color-scheme: dark) {
+  .nav-panel-icon { color: hsl(var(--badge-hue, 90) 48% 72%); }
+}
+.nav-panel-link[aria-current='page'] .nav-panel-icon { color: inherit; }
+.nav-panel-label { flex: 1; min-width: 0; }
+.nav-panel-count {
+  flex: 0 0 auto; font-size: 0.78rem; font-weight: 600;
+  padding: 2px 9px; border-radius: 999px;
+  background: var(--bg-sunken); color: var(--text-soft);
+}
+.nav-panel-link--minor {
+  font-size: 0.95rem; color: var(--text-soft); font-weight: 500;
+}
+.nav-panel-link--minor .nav-panel-icon { color: var(--text-faint); }
+/* Hairline above the secondary links instead of a separate divider element. */
+.nav-panel-link--minor:nth-last-child(2) {
+  margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border);
+  border-radius: 0 0 12px 12px;
+}
+
 /* ---------- Footer ---------- */
 .site-footer {
   border-top: 1px solid var(--border);
@@ -638,13 +725,20 @@ img { max-width: 100%; display: block; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 720px) {
+  /* The inline links move into the dropdown panel below. */
   .cat-nav { display: none; }
+  .nav-toggle { display: grid; }
   .search-mini { margin-left: auto; }
   .search-mini input { width: 110px; }
   .detail-cols { grid-template-columns: 1fr; gap: 30px; }
   .trad-banner { min-height: 240px; }
 }
 @media (max-width: 560px) {
+  /* Brand + search + toggle no longer fit on one row — drop the header search;
+     the panel's "Search practices" link goes to the full search page. */
+  .site-header .search-mini { display: none; }
+  .header-inner { gap: 12px; }
+  .nav-toggle { margin-left: auto; }
   .trad-row-region { display: none; } /* keep index rows to name + arrow */
   .trad-row { gap: 12px; }
 }

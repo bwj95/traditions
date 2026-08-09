@@ -1,8 +1,9 @@
 ---
 import '../styles/global.css';
-import { categories, categoryMeta } from '../data/content';
+import { categories, categoryMeta, categoryCounts } from '../data/content';
 import { url } from '../utils';
 import Icon from '../components/Icon.astro';
+import CategoryIcon from '../components/CategoryIcon.astro';
 import Meadow from '../components/Meadow.astro';
 
 interface Props {
@@ -56,6 +57,46 @@ const {
             <Icon name="search" size={16} />
             <input type="search" name="q" placeholder="Search practices…" aria-label="Search practices" />
           </form>
+          {/* Small screens only — .cat-nav is hidden there, so these links need
+              somewhere to live. Bars morph to an X via the aria-expanded state,
+              so the CSS reads the same flag assistive tech does. */}
+          <button
+            type="button"
+            class="nav-toggle"
+            id="nav-toggle"
+            aria-expanded="false"
+            aria-controls="nav-panel"
+            aria-label="Menu"
+          >
+            <span class="nav-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+          </button>
+        </div>
+
+        <div class="nav-panel" id="nav-panel">
+          <nav class="wrap nav-panel-inner" aria-label="Sections">
+            {categories.map((c) => (
+              <a
+                href={url(c)}
+                class="nav-panel-link"
+                aria-current={activeCategory === c ? 'page' : undefined}
+                style={`--badge-hue:${categoryMeta[c].hue}`}
+              >
+                <CategoryIcon category={c} size={20} class="nav-panel-icon" />
+                <span class="nav-panel-label">{categoryMeta[c].label}</span>
+                <span class="nav-panel-count">{categoryCounts[c]}</span>
+              </a>
+            ))}
+            {/* The header search collapses below 560px — this replaces it with
+                the full search page rather than duplicating the form. */}
+            <a href={url('search')} class="nav-panel-link nav-panel-link--minor">
+              <Icon name="search" size={18} class="nav-panel-icon" />
+              <span class="nav-panel-label">Search practices</span>
+            </a>
+            <a href={url('credits')} class="nav-panel-link nav-panel-link--minor">
+              <Icon name="info" size={18} class="nav-panel-icon" />
+              <span class="nav-panel-label">Image credits</span>
+            </a>
+          </nav>
         </div>
       </header>
 
@@ -85,15 +126,58 @@ const {
     <Meadow />
 
     <script is:inline>
-      // Auto-hiding header: hide on scroll down, reappear on scroll up, always
-      // visible near the top. Same threshold pattern as the workbench nav.
+      // Header behaviour: auto-hide on scroll + the small-screen dropdown menu.
+      // They're in one IIFE because they interact — the header must not slide
+      // away while the menu hanging off it is open.
       (() => {
         const header = document.querySelector('.site-header');
         if (!header) return;
+        const toggle = document.getElementById('nav-toggle');
+        const panel = document.getElementById('nav-panel');
+
+        const isOpen = () => toggle?.getAttribute('aria-expanded') === 'true';
+        const setOpen = (open) => {
+          if (!toggle || !panel) return;
+          toggle.setAttribute('aria-expanded', String(open));
+          panel.classList.toggle('is-open', open);
+          // Reappear if the header had auto-hidden before the menu opened.
+          if (open) header.classList.remove('is-hidden');
+        };
+
+        if (toggle && panel) {
+          toggle.addEventListener('click', () => setOpen(!isOpen()));
+
+          // Any link inside the panel closes it. Same-page navigations would
+          // rebuild the DOM anyway, but in-page jumps (#five-minute-reset)
+          // would otherwise leave the panel covering the target.
+          panel.addEventListener('click', (e) => {
+            if (e.target.closest('a')) setOpen(false);
+          });
+
+          document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isOpen()) {
+              setOpen(false);
+              toggle.focus(); // don't strand focus inside a hidden panel
+            }
+          });
+
+          document.addEventListener('pointerdown', (e) => {
+            if (isOpen() && !header.contains(e.target)) setOpen(false);
+          });
+
+          // Past the breakpoint the inline .cat-nav is back and the toggle is
+          // display:none — close so focus can't land in a hidden panel.
+          matchMedia('(min-width: 721px)').addEventListener('change', (e) => {
+            if (e.matches) setOpen(false);
+          });
+        }
+
         let lastY = window.scrollY;
         const TH = 8; // px of travel before reacting — ignores scroll jitter
         window.addEventListener('scroll', () => {
           const y = window.scrollY;
+          // Scrolling inside the open panel must not retract the header.
+          if (isOpen()) { lastY = y; return; }
           if (y < 90) header.classList.remove('is-hidden');
           else if (y > lastY + TH) header.classList.add('is-hidden');
           else if (y < lastY - TH) header.classList.remove('is-hidden');
