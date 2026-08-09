@@ -16,13 +16,19 @@
  * which source pixel each output pixel samples, so the artwork underneath
  * genuinely bends. The gradient doubles as a specular term for the glints.
  *
- * Three things layer on top of that:
- *   - Crests and caustics are tinted across the site's terracotta → ochre →
- *     sage spectrum by column, so the pool glints in the brand accent.
- *   - A baked caustic texture scrolls slowly underneath, sampled at the
- *     *refracted* coordinate so its veins bend with the surface.
- *   - The rain keeps a 4s-in / 6s-out breathing cycle (6 breaths a minute)
- *     instead of a random timer, and the caustics swell and fade with it.
+ * The backdrop is a slowly WANDERING ocean gradient — each stop drifts in hue
+ * and lightness on its own incommensurate period, and the gradient axis swings,
+ * so light appears to move across the water without ever looping. It's
+ * repainted at 5Hz, not per frame (buildSource redraws shapes and pulls a full
+ * getImageData). The drawn current striations and the veined caustic layer both
+ * went: ripples now read as glints across that gradient, which is quieter.
+ *
+ * Crest glints are tinted per column across the site's terracotta → ochre →
+ * sage spectrum, so the pool catches the brand accent. The rain keeps a
+ * 4s-in / 6s-out breathing cycle (6 breaths a minute) and the gradient's
+ * lightness swells with it.
+ *
+ * The motes are drawn toward the cursor and shoved gently outward on a click.
  *
  * The backing store is deliberately a third of CSS resolution and upscaled by
  * the browser — a ninth of the pixels to push, and the resulting softness reads
@@ -91,7 +97,6 @@ const { full = false } = Astro.props;
     const ctx = canvas.getContext('2d', { alpha: false });
     const reduceMq = matchMedia('(prefers-reduced-motion: reduce)');
     const darkMq = matchMedia('(prefers-color-scheme: dark)');
-    const fineMq = matchMedia('(pointer: fine)');
 
     // Sim runs at 1/SCALE of CSS pixels; the browser upscales the canvas.
     //
@@ -117,11 +122,6 @@ const { full = false } = Astro.props;
     // ripple never animated at all.
     const SETTLED = 0.03;
 
-    const CAUST = 17;     // contrast of the drifting caustic filaments
-    // Caustic values are 0..1, so adding them raw is a positive bias that
-    // washes the whole pool pale. Centring on the texture's own average makes
-    // veins brighten AND the gaps between them darken — contrast, not fog.
-    const CAUST_MID = 0.22;
     const TINT = 0.85;    // 0 = white glints, 1 = fully spectrum-coloured
     // Coherent breathing: 4s in, 6s out = 6 breaths/min, the rate most of the
     // breath practices in this catalogue land on. The rain keeps that time.
@@ -129,8 +129,9 @@ const { full = false } = Astro.props;
 
     let w = 0, h = 0;
     let cur, prv, src, img, out;
-    let caust, tintR, tintG, tintB, damping;
-    let raf = 0, visible = false, lastTrail = 0;
+    let tintR, tintG, tintB, damping;
+    let lastPaint = -1e9; // when the drifting gradient was last repainted
+    let raf = 0, visible = false;
     let breathT0 = 0, breathPhase = -1, breathEnv = 0.5;
 
     const readVar = (name, fallback) =>
@@ -175,9 +176,12 @@ const { full = false } = Astro.props;
        Glow is a pre-rendered sprite blitted with 'lighter' rather than a
        per-particle radial gradient — building ~80 gradients per frame is the
        expensive way to do this. */
-    const PFORCE = 26;     // how hard the wave gradient shoves a mote
-    const PDRAG = 0.94;
+    const PFORCE = 7;      // how hard the wave gradient shoves a mote
+    const PDRAG = 0.965;   // higher drag = longer, smoother glides
+    const ATTRACT = 0.020; // pull toward the cursor
+    const SCATTER = 1.5;   // one-off shove on click
     let motes = [], sprites = null;
+    let px = -1e4, py = -1e4, pointerIn = false; // cursor, in sim coords
 
     function buildSprites() {
       sprites = ['rgba(214,236,255,', 'rgba(255,225,170,'].map((rgb) => {
@@ -211,30 +215,63 @@ const { full = false } = Astro.props;
       }
     }
 
+    /* One gentle outward shove from a point — the click gesture. Falls off
+       smoothly with distance so nothing snaps; motes near the point ease away
+       and drag settles them again over a second or two. */
+    function scatterMotes(cx, cy) {
+      for (const p of motes) {
+        const dx = p.x - cx, dy = p.y - cy;
+        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+        const fall = Math.exp(-d / (Math.min(w, h) * 0.42));
+        const f = SCATTER * fall;
+        p.vx += (dx / d) * f;
+        p.vy += (dy / d) * f;
+      }
+    }
+
     function drawMotes(t, still) {
       if (!motes.length || !sprites) return;
       ctx.globalCompositeOperation = 'lighter';
+      const near = Math.min(w, h) * 1.15; // attraction reach
       for (const p of motes) {
         if (!still) {
+          // Ripples still nudge them, but far more softly than before — the
+          // gradient spikes hard at a wave front and that was most of the
+          // twitchiness.
           const xi = p.x | 0, yi = p.y | 0;
           if (xi > 0 && yi > 0 && xi < w - 1 && yi < h - 1) {
             const i = yi * w + xi;
             p.vx += (cur[i - 1] - cur[i + 1]) * PFORCE;
             p.vy += (cur[i - w] - cur[i + w]) * PFORCE;
           }
+          // Drawn toward the cursor. Normalised direction with a distance
+          // falloff, so distant motes drift in slowly rather than everything
+          // converging at once — curiosity, not gravity.
+          if (pointerIn) {
+            const dx = px - p.x, dy = py - p.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d > 2) {
+              const f = ATTRACT * Math.max(0, 1 - d / near);
+              p.vx += (dx / d) * f;
+              p.vy += (dy / d) * f;
+            }
+          }
           p.vx *= PDRAG; p.vy *= PDRAG;
-          p.x += p.vx + Math.sin(t * 0.0002 + p.tw) * p.drift;
-          p.y += p.vy - p.drift * 0.6;
+          // A single slow current instead of per-mote jitter.
+          p.x += p.vx + p.drift * 0.35;
+          p.y += p.vy - p.drift;
           // Wrap rather than bounce — a wall to bump into is the thing we just
           // spent the boundary work removing.
           if (p.x < -4) p.x = w + 4; else if (p.x > w + 4) p.x = -4;
           if (p.y < -4) p.y = h + 4; else if (p.y > h + 4) p.y = -4;
         }
         const speed = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
-        const twinkle = still ? 0.75 : 0.62 + 0.38 * Math.sin(t * 0.0013 + p.tw);
-        let a = (0.06 + Math.min(0.5, speed * 2.2)) * twinkle;
-        if (a > 0.62) a = 0.62;
-        const rr = p.r * (1 + Math.min(0.9, speed * 1.4));
+        // Slow twinkle and a gentler speed response: the old curve made them
+        // strobe every time a wave front crossed.
+        const twinkle = still ? 0.78 : 0.72 + 0.28 * Math.sin(t * 0.0007 + p.tw);
+        let a = (0.09 + Math.min(0.34, speed * 1.1)) * twinkle;
+        if (a > 0.55) a = 0.55;
+        const rr = p.r * (1 + Math.min(0.5, speed * 0.7));
         ctx.globalAlpha = a;
         ctx.drawImage(sprites[p.sp], p.x - rr * 2.4, p.y - rr * 2.4, rr * 4.8, rr * 4.8);
       }
@@ -242,27 +279,20 @@ const { full = false } = Astro.props;
       ctx.globalCompositeOperation = 'source-over';
     }
 
-    /* ---------- caustics: a static filament texture, scrolled ----------
-       Regenerating a caustic pattern per frame would cost trig on every pixel.
-       Instead bake it once and drift the sample offset — per frame that's two
-       wraps and an array read. Every sine coefficient is an INTEGER so the
-       pattern tiles seamlessly and the drift never shows a seam. */
-    function buildCaustic() {
-      caust = new Float32Array(w * h);
-      const tau = Math.PI * 2;
-      for (let y = 0; y < h; y++) {
-        const v = (y / h) * tau;
-        for (let x = 0; x < w; x++) {
-          const u = (x / w) * tau;
-          const n = (Math.sin(3 * u + 2 * v) + Math.sin(u - 3 * v) + Math.sin(2 * u + 2 * v)) / 3;
-          // Cubing the inverted ridge turns soft waves into thin bright veins.
-          const k = 1 - (n < 0 ? -n : n);
-          caust[y * w + x] = k * k * k;
-        }
-      }
-    }
-
-    /* ---------- per-column spectrum tint ---------- */
+    /* ---------- colour helpers ---------- */
+    const rgbHsl = ([r, g, b]) => {
+      r /= 255; g /= 255; b /= 255;
+      const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
+      if (mx === mn) return [0, 0, l * 100];
+      const dd = mx - mn;
+      const sat = dd / (l > 0.5 ? 2 - mx - mn : mx + mn);
+      const hh = mx === r ? (g - b) / dd + (g < b ? 6 : 0)
+               : mx === g ? (b - r) / dd + 2
+               : (r - g) / dd + 4;
+      return [hh * 60, sat * 100, l * 100];
+    };
+    const hslCss = (h2, s2, l2) =>
+      `hsl(${h2.toFixed(1)} ${Math.max(0, Math.min(100, s2)).toFixed(1)}% ${Math.max(0, Math.min(100, l2)).toFixed(1)}%)`;
     const hexRgb = (s) => {
       const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.trim());
       return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
@@ -288,19 +318,36 @@ const { full = false } = Astro.props;
     }
 
     /* ---------- the artwork the ripples distort ---------- */
-    function buildSource() {
+    function buildSource(ms) {
       if (!w || !h) return;
       const off = document.createElement('canvas');
       off.width = w; off.height = h;
       const c = off.getContext('2d');
 
-      const a = readVar('--water-a', '#cfe0d8');
-      const b = readVar('--water-b', '#a8c4bd');
-      const d = readVar('--water-c', '#7d9c96');
-      const glow = readVar('--water-glow', '#e8d9b8');
-      const ink = readVar('--water-ink', 'rgba(255,255,255,0.5)');
+      // Each stop wanders in hue and lightness on its own slow period, so the
+      // gradient never repeats exactly and never visibly loops. The periods are
+      // deliberately incommensurate. The breath rides on top as a small swell.
+      const T = (ms || 0) / 1000;
+      const swell = 0.94 + 0.11 * breathEnv;
+      const wander = (hex, i) => {
+        const [hh, ss, ll] = rgbHsl(hexRgb(hex));
+        const hz = [41, 67, 53][i], lz = [97, 73, 111][i];
+        return hslCss(
+          (hh + Math.sin((T / hz) * Math.PI * 2) * 13 + 360) % 360,
+          ss * (1 + Math.sin((T / lz) * Math.PI * 2) * 0.12),
+          ll * swell * (1 + Math.sin((T / lz) * Math.PI * 2 + 1.1) * 0.16),
+        );
+      };
+      const a = wander(readVar('--water-a', '#24505c'), 0);
+      const b = wander(readVar('--water-b', '#123240'), 1);
+      const d = wander(readVar('--water-c', '#071a25'), 2);
+      const glow = readVar('--water-glow', '#6fb3ad');
 
-      const g = c.createLinearGradient(0, 0, w * 0.25, h);
+      // The gradient axis swings too, so the light seems to move across the
+      // water instead of sitting in one corner.
+      const ax = w * (0.25 + Math.sin((T / 83) * Math.PI * 2) * 0.5);
+      const ay = h * (0.06 + Math.sin((T / 59) * Math.PI * 2) * 0.06);
+      const g = c.createLinearGradient(ax, ay, w - ax, h);
       g.addColorStop(0, a); g.addColorStop(0.55, b); g.addColorStop(1, d);
       c.fillStyle = g; c.fillRect(0, 0, w, h);
 
@@ -314,27 +361,6 @@ const { full = false } = Astro.props;
         c.fillStyle = rg; c.fillRect(0, 0, w, h);
       }
       c.globalAlpha = 1;
-
-      // Slow currents — the refraction needs structure to grab onto, otherwise
-      // a flat gradient bends into something indistinguishable from itself.
-      c.strokeStyle = ink;
-      c.lineWidth = Math.max(1, h / 130);
-      for (let i = 0; i < 11; i++) {
-        const base = (h / 11) * (i + 0.5);
-        // Amplitude has to be a real fraction of the height or these read as
-        // scan lines rather than currents — the first pass used h*0.03, ~2px,
-        // which drew eleven straight rules across the pool.
-        const amp = h * 0.11 * (0.55 + (i % 3) * 0.35);
-        c.globalAlpha = 0.13 + (i % 4) * 0.045;
-        c.beginPath();
-        for (let x = 0; x <= w; x += 3) {
-          const y = base + Math.sin(x / (w / 2.1) + i * 1.7) * amp
-                         + Math.sin(x / (w / 5.3) + i * 0.6) * amp * 0.45
-                         + Math.sin(x / (w / 11) + i) * amp * 0.16;
-          x ? c.lineTo(x, y) : c.moveTo(x, y);
-        }
-        c.stroke();
-      }
 
       // Things down there. Deliberately unresolved: soft dark masses with no
       // readable edge, so you register a shape without ever identifying it.
@@ -392,12 +418,11 @@ const { full = false } = Astro.props;
       prv = new Float32Array(w * h);
       img = ctx.createImageData(w, h);
       out = img.data;
-      buildCaustic();
       buildDamping();
       buildTint();
       if (!sprites) buildSprites();
       buildMotes();
-      buildSource();
+      buildSource(performance.now());
       render(performance.now());
     }
 
@@ -417,17 +442,10 @@ const { full = false } = Astro.props;
     function render(t) {
       if (!src) return;
       const W = w, d = out;
-      // Caustics drift slowly and swell with the breath; under reduced motion
-      // they hold still so the pool is a photograph, not a loop.
       const still = reduceMq.matches;
       const ms = still ? 0 : (t || 0);
-      const ox = still ? 0 : Math.floor(ms * 0.004) % W;
-      const oy = still ? 0 : Math.floor(ms * 0.0015) % h;
-      const camt = CAUST * (0.68 + 0.5 * breathEnv);
       for (let y = 1; y < h - 1; y++) {
         const row = y * W;
-        const cy = (y + oy) % h;
-        const crow = cy * W;
         for (let x = 1; x < W - 1; x++) {
           const i = row + x;
           const dx = cur[i - 1] - cur[i + 1];
@@ -441,9 +459,9 @@ const { full = false } = Astro.props;
           if (sy < 0) sy = 0; else if (sy >= h) sy = h - 1;
           const si = (sy * W + sx) << 2;
           const di = i << 2;
-          // Caustics are read at the REFRACTED column, so the veins bend with
-          // the surface instead of sliding across it like a decal.
-          const s = (dx + dy) * SPEC + (caust[crow + ((sx + ox) % W)] - CAUST_MID) * camt;
+          // Ripples now read purely as glints across the gradient — the veined
+          // caustic layer and the drawn currents both went, per "less busy".
+          const s = (dx + dy) * SPEC;
           d[di] = src[si] + s * tintR[x];
           d[di + 1] = src[si + 1] + s * tintG[x];
           d[di + 2] = src[si + 2] + s * tintB[x];
@@ -523,6 +541,12 @@ const { full = false } = Astro.props;
         }
       }
 
+      // Repaint the gradient a few times a second rather than every frame:
+      // buildSource redraws the shapes and pulls a full getImageData, which is
+      // far too much for 60fps. The colours move so slowly that 5Hz steps are
+      // invisible.
+      if (!reduceMq.matches && t - lastPaint > 200) { lastPaint = t; buildSource(t); }
+
       for (let i = 0; i < STEPS; i++) step();
       render(t);
       raf = requestAnimationFrame(tick);
@@ -538,29 +562,37 @@ const { full = false } = Astro.props;
 
     /* ---------- wiring ---------- */
     frame.addEventListener('pointerdown', (e) => {
-      const [x, y] = atEvent(e); mark(); stir(x, y, true);
+      const [x, y] = atEvent(e);
+      px = x; py = y; pointerIn = true;
+      mark();
+      stir(x, y, true);
+      scatterMotes(x, y);
     });
+    // Moving the cursor no longer trails ripples behind it — it just moves the
+    // point the motes are drawn to. The trail was a drop every 55ms, which is
+    // most of what made the surface feel restless.
     frame.addEventListener('pointermove', (e) => {
-      if (reduceMq.matches || !fineMq.matches || e.pointerType === 'touch') return;
-      const now = performance.now();
-      if (now - lastTrail < 55) return; // a drop every frame is a firehose
-      lastTrail = now;
-      const [x, y] = atEvent(e); stir(x, y, false);
+      const [x, y] = atEvent(e);
+      px = x; py = y; pointerIn = true;
+      if (!reduceMq.matches) start();
     }, { passive: true });
-    // Touch drags should paint ripples without also scrolling the page.
+    frame.addEventListener('pointerleave', () => { pointerIn = false; }, { passive: true });
+    // Touch drag pulls them along too. No preventDefault: touch-action already
+    // reserves horizontal drags, and swallowing the vertical ones would trap
+    // the page on the full-screen version.
     frame.addEventListener('touchmove', (e) => {
-      const t = e.touches[0];
-      if (!t) return;
-      e.preventDefault();
-      const now = performance.now();
-      if (now - lastTrail < 55) return;
-      lastTrail = now;
-      const [x, y] = atEvent(t); stir(x, y, false);
-    }, { passive: false });
+      const tp = e.touches[0];
+      if (!tp) return;
+      const [x, y] = atEvent(tp);
+      px = x; py = y; pointerIn = true;
+    }, { passive: true });
+    frame.addEventListener('touchend', () => { pointerIn = false; }, { passive: true });
 
     button?.addEventListener('click', () => {
       mark();
-      stir(w * (0.25 + Math.random() * 0.5), h * (0.25 + Math.random() * 0.5), true);
+      const x = w * (0.25 + Math.random() * 0.5), y = h * (0.25 + Math.random() * 0.5);
+      stir(x, y, true);
+      scatterMotes(x, y);
     });
 
     // Only animate while on screen — an idle rAF loop behind the fold is pure
@@ -587,14 +619,14 @@ const { full = false } = Astro.props;
       window.addEventListener('resize', resize, { passive: true });
     }
 
-    darkMq.addEventListener?.('change', () => { buildTint(); buildSource(); render(performance.now()); });
+    darkMq.addEventListener?.('change', () => { buildTint(); buildSource(performance.now()); render(performance.now()); });
     reduceMq.addEventListener?.('change', () => {
       stop();
       if (!reduceMq.matches && visible) start(); else render(performance.now());
     });
     // Canvas text takes whatever font is loaded at draw time — redraw once
     // Sentient is actually available, or the word renders in Georgia.
-    document.fonts?.ready.then(() => { buildSource(); render(performance.now()); });
+    document.fonts?.ready.then(() => { buildSource(performance.now()); render(performance.now()); });
 
     resize();
   })();

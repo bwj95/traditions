@@ -609,7 +609,7 @@ img { max-width: 100%; display: block; }
   --water-c: #071a25;   /* down where it stops */
   --water-deep: #030c14; /* the shapes below */
   --water-glow: #6fb3ad; /* what's left of the daylight */
-  --water-ink: rgba(178, 222, 226, 0.34); /* currents and kelp */
+  --water-ink: rgba(178, 222, 226, 0.34); /* reserved: no longer painted since the currents went */
   /* Ripple crests and caustics are tinted across these three, left to right —
      the same terracotta → ochre → sage as --spectrum, so the pool glints in the
      site's accent rather than plain white. */
