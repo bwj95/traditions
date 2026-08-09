@@ -550,6 +550,12 @@ img { max-width: 100%; display: block; }
   --water-c: #6f9490;   /* depth */
   --water-glow: #f0e2c2; /* sunlight off to one side */
   --water-ink: rgba(255, 255, 255, 0.62); /* currents, rings, the word */
+  /* Ripple crests and caustics are tinted across these three, left to right —
+     the same terracotta → ochre → sage as --spectrum, so the pool glints in the
+     site's accent rather than plain white. */
+  --water-tint-a: #a8543a;
+  --water-tint-b: #c2913c;
+  --water-tint-c: #6b7d5a;
 
   position: relative;
   height: clamp(280px, 44vh, 460px);
@@ -568,6 +574,9 @@ img { max-width: 100%; display: block; }
     --water-c: #0a171c;
     --water-glow: #3c5c53;
     --water-ink: rgba(190, 226, 214, 0.5);
+    --water-tint-a: #dd9077;
+    --water-tint-b: #e0c07a;
+    --water-tint-c: #9db386;
   }
 }
 .water-canvas {

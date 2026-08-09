@@ -14,15 +14,23 @@
  * which source pixel each output pixel samples, so the artwork underneath
  * genuinely bends. The gradient doubles as a specular term for the glints.
  *
- * The backing store is deliberately half CSS resolution and upscaled by the
- * browser — quarter the pixels to push, and the resulting softness reads as
- * depth. DPR is irrelevant for the same reason.
+ * Three things layer on top of that:
+ *   - Crests and caustics are tinted across the site's terracotta → ochre →
+ *     sage spectrum by column, so the pool glints in the brand accent.
+ *   - A baked caustic texture scrolls slowly underneath, sampled at the
+ *     *refracted* coordinate so its veins bend with the surface.
+ *   - The rain keeps a 4s-in / 6s-out breathing cycle (6 breaths a minute)
+ *     instead of a random timer, and the caustics swell and fade with it.
+ *
+ * The backing store is deliberately a third of CSS resolution and upscaled by
+ * the browser — a ninth of the pixels to push, and the resulting softness reads
+ * as depth. DPR is irrelevant for the same reason.
  *
  * Canvas + JS (not experimental CSS) so it works in every engine. Decorative:
  * canvas is aria-hidden and the "Drop a stone" button gives keyboard and
  * assistive-tech users the same interaction. Under prefers-reduced-motion
- * there's no rain and no idle loop — it renders still, and only a deliberate
- * tap stirs it, running just long enough to settle again.
+ * there's no rain, no drift and no idle loop — it renders still, and only a
+ * deliberate tap stirs it, running just long enough to settle again.
  */
 ---
 
@@ -31,7 +39,8 @@
     <h2 class="section-title">Still water</h2>
     <p class="section-note">
       A place to do nothing in particular. Touch the surface and watch it settle —
-      the oldest instruction in half these traditions.
+      the oldest instruction in half these traditions. The rain keeps a slow
+      four-in, six-out rhythm; breathe along with it if you like.
     </p>
   </div>
 
@@ -76,12 +85,69 @@
     // ripple never animated at all.
     const SETTLED = 0.03;
 
+    const CAUST = 17;     // contrast of the drifting caustic filaments
+    // Caustic values are 0..1, so adding them raw is a positive bias that
+    // washes the whole pool pale. Centring on the texture's own average makes
+    // veins brighten AND the gaps between them darken — contrast, not fog.
+    const CAUST_MID = 0.22;
+    const TINT = 0.85;    // 0 = white glints, 1 = fully spectrum-coloured
+    // Coherent breathing: 4s in, 6s out = 6 breaths/min, the rate most of the
+    // breath practices in this catalogue land on. The rain keeps that time.
+    const INHALE = 4000, EXHALE = 6000, BREATH = INHALE + EXHALE;
+
     let w = 0, h = 0;
     let cur, prv, src, img, out;
-    let raf = 0, visible = false, nextRain = 0, lastTrail = 0;
+    let caust, tintR, tintG, tintB;
+    let raf = 0, visible = false, lastTrail = 0;
+    let breathT0 = 0, breathPhase = -1, breathEnv = 0.5;
 
     const readVar = (name, fallback) =>
       getComputedStyle(frame).getPropertyValue(name).trim() || fallback;
+
+    /* ---------- caustics: a static filament texture, scrolled ----------
+       Regenerating a caustic pattern per frame would cost trig on every pixel.
+       Instead bake it once and drift the sample offset — per frame that's two
+       wraps and an array read. Every sine coefficient is an INTEGER so the
+       pattern tiles seamlessly and the drift never shows a seam. */
+    function buildCaustic() {
+      caust = new Float32Array(w * h);
+      const tau = Math.PI * 2;
+      for (let y = 0; y < h; y++) {
+        const v = (y / h) * tau;
+        for (let x = 0; x < w; x++) {
+          const u = (x / w) * tau;
+          const n = (Math.sin(3 * u + 2 * v) + Math.sin(u - 3 * v) + Math.sin(2 * u + 2 * v)) / 3;
+          // Cubing the inverted ridge turns soft waves into thin bright veins.
+          const k = 1 - (n < 0 ? -n : n);
+          caust[y * w + x] = k * k * k;
+        }
+      }
+    }
+
+    /* ---------- per-column spectrum tint ---------- */
+    const hexRgb = (s) => {
+      const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.trim());
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
+    };
+    function buildTint() {
+      tintR = new Float32Array(w); tintG = new Float32Array(w); tintB = new Float32Array(w);
+      const A = hexRgb(readVar('--water-tint-a', '#a8543a'));
+      const B = hexRgb(readVar('--water-tint-b', '#c2913c'));
+      const C = hexRgb(readVar('--water-tint-c', '#6b7d5a'));
+      for (let x = 0; x < w; x++) {
+        const t = w > 1 ? x / (w - 1) : 0;
+        const [p, q, k] = t < 0.5 ? [A, B, t * 2] : [B, C, (t - 0.5) * 2];
+        const r = p[0] + (q[0] - p[0]) * k;
+        const g = p[1] + (q[1] - p[1]) * k;
+        const b = p[2] + (q[2] - p[2]) * k;
+        // Normalise against luminance so tinting shifts hue without changing how
+        // bright a crest reads, then ease back toward neutral by TINT.
+        const lum = (r + g + b) / 3 || 1;
+        tintR[x] = 1 + (r / lum - 1) * TINT;
+        tintG[x] = 1 + (g / lum - 1) * TINT;
+        tintB[x] = 1 + (b / lum - 1) * TINT;
+      }
+    }
 
     /* ---------- the artwork the ripples distort ---------- */
     function buildSource() {
@@ -164,8 +230,10 @@
       prv = new Float32Array(w * h);
       img = ctx.createImageData(w, h);
       out = img.data;
+      buildCaustic();
+      buildTint();
       buildSource();
-      render();
+      render(performance.now());
     }
 
     /* ---------- wave equation ---------- */
@@ -181,11 +249,20 @@
       const t = cur; cur = prv; prv = t; // new state lands in cur
     }
 
-    function render() {
+    function render(t) {
       if (!src) return;
       const W = w, d = out;
+      // Caustics drift slowly and swell with the breath; under reduced motion
+      // they hold still so the pool is a photograph, not a loop.
+      const still = reduceMq.matches;
+      const ms = still ? 0 : (t || 0);
+      const ox = still ? 0 : Math.floor(ms * 0.004) % W;
+      const oy = still ? 0 : Math.floor(ms * 0.0015) % h;
+      const camt = CAUST * (0.68 + 0.5 * breathEnv);
       for (let y = 1; y < h - 1; y++) {
         const row = y * W;
+        const cy = (y + oy) % h;
+        const crow = cy * W;
         for (let x = 1; x < W - 1; x++) {
           const i = row + x;
           const dx = cur[i - 1] - cur[i + 1];
@@ -199,10 +276,12 @@
           if (sy < 0) sy = 0; else if (sy >= h) sy = h - 1;
           const si = (sy * W + sx) << 2;
           const di = i << 2;
-          const s = (dx + dy) * SPEC;
-          d[di] = src[si] + s;
-          d[di + 1] = src[si + 1] + s;
-          d[di + 2] = src[si + 2] + s;
+          // Caustics are read at the REFRACTED column, so the veins bend with
+          // the surface instead of sliding across it like a decal.
+          const s = (dx + dy) * SPEC + (caust[crow + ((sx + ox) % W)] - CAUST_MID) * camt;
+          d[di] = src[si] + s * tintR[x];
+          d[di + 1] = src[si + 1] + s * tintG[x];
+          d[di + 2] = src[si + 2] + s * tintB[x];
           d[di + 3] = 255;
         }
       }
@@ -250,14 +329,32 @@
 
     function tick(t) {
       if (!visible) { raf = 0; return; }
-      if (reduceMq.matches && settled()) { raf = 0; render(); return; }
-      if (!reduceMq.matches && t > nextRain) {
-        drop(20 + Math.random() * (w - 40), 20 + Math.random() * (h - 40),
-             Math.max(2, w / 105), -1.1 - Math.random() * 1.5);
-        nextRain = t + 1300 + Math.random() * 3000;
+      if (reduceMq.matches && settled()) { raf = 0; render(t); return; }
+
+      if (!reduceMq.matches) {
+        // Rain on a breath cycle rather than a random timer: one stone as the
+        // inhale starts, one as the exhale starts. Six a minute — slow enough
+        // to breathe along with, which is the whole idea.
+        const phase = (t - breathT0) % BREATH;
+        const inhaling = phase < INHALE;
+        const p = inhaling ? phase / INHALE : (phase - INHALE) / EXHALE;
+        // Smooth 0→1 rising through the inhale, 1→0 falling through the exhale.
+        breathEnv = inhaling
+          ? 0.5 - 0.5 * Math.cos(Math.PI * p)
+          : 0.5 + 0.5 * Math.cos(Math.PI * p);
+
+        const which = inhaling ? 0 : 1;
+        if (which !== breathPhase) {
+          breathPhase = which;
+          // The exhale drop is the fuller one — the release — but only just:
+          // if the inhale beat is much weaker it stops reading as a rhythm at all.
+          drop(w * (0.18 + Math.random() * 0.64), h * (0.2 + Math.random() * 0.6),
+               Math.max(3, w / 58), inhaling ? -2.5 : -3.2);
+        }
       }
+
       for (let i = 0; i < STEPS; i++) step();
-      render();
+      render(t);
       raf = requestAnimationFrame(tick);
     }
 
@@ -301,7 +398,7 @@
     if ('IntersectionObserver' in window) {
       new IntersectionObserver((entries) => {
         visible = entries[0].isIntersecting;
-        if (visible) { nextRain = performance.now() + 400; if (!reduceMq.matches) start(); }
+        if (visible) { breathT0 = performance.now(); breathPhase = -1; if (!reduceMq.matches) start(); }
         else stop();
       }, { threshold: 0.05 }).observe(frame);
     } else {
@@ -320,14 +417,14 @@
       window.addEventListener('resize', resize, { passive: true });
     }
 
-    darkMq.addEventListener?.('change', () => { buildSource(); render(); });
+    darkMq.addEventListener?.('change', () => { buildTint(); buildSource(); render(performance.now()); });
     reduceMq.addEventListener?.('change', () => {
       stop();
-      if (!reduceMq.matches && visible) start(); else render();
+      if (!reduceMq.matches && visible) start(); else render(performance.now());
     });
     // Canvas text takes whatever font is loaded at draw time — redraw once
     // Sentient is actually available, or the word renders in Georgia.
-    document.fonts?.ready.then(() => { buildSource(); render(); });
+    document.fonts?.ready.then(() => { buildSource(); render(performance.now()); });
 
     resize();
   })();
