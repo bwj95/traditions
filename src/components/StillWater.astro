@@ -130,13 +130,19 @@ const { full = false } = Astro.props;
     // Skim: a soft continuous wake under a moving cursor. Small and wide, not
     // a stone — a stone is a point impulse and reads as a struck ring.
     const SKIM = 1.9;
+    // Caustics are back, but as sunlight on sand rather than the veins in the
+    // dark they were before: brighter, lower contrast, slower drift. A sunlit
+    // shallow needs the dancing light net — without it the sand reads as flat
+    // paper. Centred on the texture's own average so the veins brighten and the
+    // gaps darken instead of the whole floor fogging pale.
+    const CAUST = 15, CAUST_MID = 0.22;
     // Coherent breathing: 4s in, 6s out = 6 breaths/min, the rate most of the
     // breath practices in this catalogue land on. The rain keeps that time.
     const INHALE = 4000, EXHALE = 6000, BREATH = INHALE + EXHALE;
 
     let w = 0, h = 0;
     let cur, prv, src, img, out;
-    let tintR, tintG, tintB, damping;
+    let tintR, tintG, tintB, damping, caust;
     let lastPaint = -1e9; // when the drifting gradient was last repainted
     let raf = 0, visible = false;
     let px = -1e4, py = -1e4, pointerIn = false; // cursor, in sim coords
@@ -175,6 +181,25 @@ const { full = false } = Astro.props;
       }
     }
 
+    /* ---------- caustics: one baked filament texture, scrolled ----------
+       Baked once and sampled with a drifting offset — regenerating trig per
+       pixel per frame is the expensive way to do this. Every sine coefficient
+       is an INTEGER so the pattern tiles seamlessly and the drift never shows
+       a seam. */
+    function buildCaustic() {
+      caust = new Float32Array(w * h);
+      const tau = Math.PI * 2;
+      for (let y = 0; y < h; y++) {
+        const v = (y / h) * tau;
+        for (let x = 0; x < w; x++) {
+          const u = (x / w) * tau;
+          const n = (Math.sin(3 * u + 2 * v) + Math.sin(u - 3 * v) + Math.sin(2 * u + 2 * v)) / 3;
+          const k = 1 - (n < 0 ? -n : n);
+          caust[y * w + x] = k * k * k;
+        }
+      }
+    }
+
     /* ---------- colour helpers ---------- */
     const rgbHsl = ([r, g, b]) => {
       r /= 255; g /= 255; b /= 255;
@@ -187,8 +212,8 @@ const { full = false } = Astro.props;
                : (r - g) / dd + 4;
       return [hh * 60, sat * 100, l * 100];
     };
-    const hslCss = (h2, s2, l2) =>
-      `hsl(${h2.toFixed(1)} ${Math.max(0, Math.min(100, s2)).toFixed(1)}% ${Math.max(0, Math.min(100, l2)).toFixed(1)}%)`;
+    const hslCss = (h2, s2, l2, a2) =>
+      `hsla(${h2.toFixed(1)}, ${Math.max(0, Math.min(100, s2)).toFixed(1)}%, ${Math.max(0, Math.min(100, l2)).toFixed(1)}%, ${a2 === undefined ? 1 : a2})`;
     const hexRgb = (s) => {
       const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s.trim());
       return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [255, 255, 255];
@@ -214,87 +239,215 @@ const { full = false } = Astro.props;
     }
 
     /* ---------- the artwork the ripples distort ---------- */
+    /* ---------- the seafloor, baked once ----------
+       Sand, ripple marks and the reef go on their own canvas at resize and are
+       then blitted. They must NOT be redrawn inside buildSource: that runs
+       ~5x a second for the drifting water, and anything randomised in there
+       would make every shell jump position five times a second. Baking also
+       keeps the per-repaint cost to one drawImage instead of ~200 paths. */
+    let floorCanvas = null;
+
+    // Deterministic scatter — same seed, same reef, every rebuild and resize.
+    const seeded = (n) => () => ((n = (n * 1664525 + 1013904223) >>> 0) / 4294967296);
+
+    function shell(c, r, col) {
+      c.fillStyle = col;
+      c.beginPath();
+      c.moveTo(0, 0);
+      c.arc(0, 0, r, Math.PI * 0.12, Math.PI * 0.88);
+      c.closePath();
+      c.fill();
+      c.strokeStyle = 'rgba(90,60,40,0.20)';
+      c.lineWidth = Math.max(0.4, r * 0.05);
+      for (let i = 0; i <= 5; i++) {
+        const ang = Math.PI * 0.12 + Math.PI * 0.76 * (i / 5);
+        c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(ang) * r * 0.94, Math.sin(ang) * r * 0.94); c.stroke();
+      }
+    }
+    function clam(c, r, col) {
+      c.fillStyle = col;
+      c.beginPath(); c.ellipse(0, 0, r, r * 0.7, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(90,60,40,0.18)';
+      c.lineWidth = Math.max(0.4, r * 0.06);
+      for (let i = 1; i <= 3; i++) {
+        c.beginPath(); c.ellipse(0, 0, r * (i / 3.6), r * 0.7 * (i / 3.6), 0, 0, Math.PI * 2); c.stroke();
+      }
+    }
+    function coral(c, size, col) {
+      c.strokeStyle = col; c.lineCap = 'round';
+      const branch = (x, y, ang, len, wd, depth) => {
+        const ex = x + Math.cos(ang) * len, ey = y + Math.sin(ang) * len;
+        c.lineWidth = wd;
+        c.beginPath(); c.moveTo(x, y); c.lineTo(ex, ey); c.stroke();
+        if (depth <= 0) return;
+        branch(ex, ey, ang - 0.55, len * 0.68, wd * 0.68, depth - 1);
+        branch(ex, ey, ang + 0.48, len * 0.72, wd * 0.68, depth - 1);
+      };
+      branch(0, 0, -Math.PI / 2, size * 0.72, Math.max(1.2, size * 0.34), 1);
+    }
+    function seaFan(c, size, col) {
+      c.strokeStyle = col; c.lineCap = 'round';
+      c.lineWidth = Math.max(0.7, size * 0.09);
+      for (let i = 0; i <= 7; i++) {
+        const ang = -Math.PI / 2 + (i / 7 - 0.5) * 1.5;
+        c.beginPath(); c.moveTo(0, 0);
+        c.quadraticCurveTo(Math.cos(ang) * size * 0.4, -size * 0.5, Math.cos(ang) * size * 0.85, Math.sin(ang) * size);
+        c.stroke();
+      }
+    }
+    function brainCoral(c, r, col) {
+      c.fillStyle = col;
+      c.beginPath(); c.ellipse(0, 0, r, r * 0.78, 0, 0, Math.PI * 2); c.fill();
+      c.strokeStyle = 'rgba(70,50,45,0.22)';
+      c.lineWidth = Math.max(0.5, r * 0.09);
+      for (let i = -2; i <= 2; i++) {
+        c.beginPath();
+        for (let t = -1; t <= 1.01; t += 0.12) {
+          const x = t * r * 0.85, y = i * r * 0.3 + Math.sin(t * 3 + i) * r * 0.1;
+          t === -1 ? c.moveTo(x, y) : c.lineTo(x, y);
+        }
+        c.stroke();
+      }
+    }
+    function starfish(c, r, col) {
+      c.fillStyle = col;
+      c.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const ang = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        const rr = i % 2 ? r * 0.42 : r;
+        const x = Math.cos(ang) * rr, y = Math.sin(ang) * rr;
+        i ? c.lineTo(x, y) : c.moveTo(x, y);
+      }
+      c.closePath(); c.fill();
+    }
+
+    function buildFloor() {
+      const f = document.createElement('canvas');
+      f.width = w; f.height = h;
+      const c = f.getContext('2d');
+      const rnd = seeded(20260809);
+
+      // Ripple marks in the sand — the bands the tide leaves behind.
+      c.strokeStyle = 'rgba(150,118,74,0.30)';
+      for (let i = 0; i < 16; i++) {
+        const base = h * (0.22 + (i / 16) * 0.86);
+        c.lineWidth = Math.max(1, h / 90) * (0.6 + (i % 3) * 0.25);
+        c.globalAlpha = 0.22 + (i % 4) * 0.05;
+        c.beginPath();
+        for (let x = 0; x <= w; x += 4) {
+          const y = base + Math.sin(x / (w / 2.6) + i * 1.3) * h * 0.035
+                         + Math.sin(x / (w / 6.1) + i) * h * 0.014;
+          x ? c.lineTo(x, y) : c.moveTo(x, y);
+        }
+        c.stroke();
+      }
+      c.globalAlpha = 1;
+
+      // The reef itself. Nothing above 0.28h — that band is open water.
+      // Sun-bleached, not tropical-aquarium. Saturated purples and magentas
+      // came out looking like plastic toys on the sand.
+      const shells = ['#f4e8d4', '#eddcc8', '#f2e0d4', '#e8d8c4'];
+      const corals = ['#cf9184', '#c98a8e', '#c1938f', '#cc9b78', '#bd8a7a'];
+      const n = Math.max(22, Math.min(70, Math.round((w * h) / 1500)));
+      const items = [];
+      for (let i = 0; i < n; i++) {
+        items.push({
+          x: rnd() * w,
+          y: h * (0.3 + rnd() * 0.72),
+          k: rnd(),
+          s: 0.55 + rnd() * 0.6,
+          rot: (rnd() - 0.5) * Math.PI,
+          col: rnd(),
+        });
+      }
+      // Paint far ones first so nearer things overlap them.
+      items.sort((p1, p2) => p1.y - p2.y);
+      const unit = Math.max(4, Math.min(w, h) * 0.030);
+      for (const it of items) {
+        const size = unit * it.s * (0.65 + (it.y / h) * 0.6); // bigger toward the front
+        c.save();
+        c.translate(it.x, it.y);
+        // Contact shadow so nothing looks pasted on.
+        c.globalAlpha = 0.13;
+        c.fillStyle = 'rgba(70,55,35,1)';
+        c.beginPath(); c.ellipse(size * 0.1, size * 0.3, size * 0.8, size * 0.24, 0, 0, Math.PI * 2); c.fill();
+        c.globalAlpha = 1;
+        c.rotate(it.rot);
+        if (it.k < 0.30) shell(c, size, shells[(it.col * 4) | 0]);
+        else if (it.k < 0.54) clam(c, size * 0.85, shells[(it.col * 4) | 0]);
+        else if (it.k < 0.66) { c.rotate(-it.rot); coral(c, size * 1.05, corals[(it.col * 5) | 0]); }
+        else if (it.k < 0.76) { c.rotate(-it.rot); seaFan(c, size * 1.1, corals[(it.col * 5) | 0]); }
+        else if (it.k < 0.92) brainCoral(c, size * 0.8, corals[(it.col * 5) | 0]);
+        else starfish(c, size * 0.85, '#cf9a72');
+        c.restore();
+      }
+      floorCanvas = f;
+    }
+
     function buildSource(ms) {
       if (!w || !h) return;
       const off = document.createElement('canvas');
       off.width = w; off.height = h;
       const c = off.getContext('2d');
 
+      // Sand first, then the reef, THEN water tinted over the top — that order
+      // is what makes it read as looking down THROUGH water rather than at a
+      // picture of a beach. Tint is strong at the top (deeper) and thin at the
+      // bottom (shallows), which is the whole depth cue.
+      c.fillStyle = readVar('--water-sand', '#e9d7ae');
+      c.fillRect(0, 0, w, h);
+      if (floorCanvas) {
+        // A hair of blur is most of what puts the reef *under* water rather
+        // than behind glass. ctx.filter is an enhancement — engines without it
+        // just draw it sharp.
+        c.filter = 'blur(0.5px)';
+        c.drawImage(floorCanvas, 0, 0);
+        c.filter = 'none';
+      }
+
       // Each stop wanders in hue and lightness on its own slow period, so the
-      // gradient never repeats exactly and never visibly loops. The periods are
-      // deliberately incommensurate. The breath rides on top as a small swell.
+      // water never repeats exactly and never visibly loops. The breath rides
+      // on top as a small swell.
       const T = (ms || 0) / 1000;
       const swell = 0.94 + 0.11 * breathEnv;
-      const wander = (hex, i) => {
+      // TINT, don't multiply. Multiplying a cyan over warm sand gives a muddy
+      // olive — the two are near-complementary, so the product kills both. An
+      // alpha blend toward bright aqua keeps the water luminous and lets the
+      // sand read as sand underneath. Alpha carries the depth: thick at the top
+      // of the frame, thin down in the shallows.
+      const wander = (hex, i, alpha) => {
         const [hh, ss, ll] = rgbHsl(hexRgb(hex));
         const hz = [41, 67, 53][i], lz = [97, 73, 111][i];
         return hslCss(
-          (hh + Math.sin((T / hz) * Math.PI * 2) * 13 + 360) % 360,
-          ss * (1 + Math.sin((T / lz) * Math.PI * 2) * 0.12),
-          ll * swell * (1 + Math.sin((T / lz) * Math.PI * 2 + 1.1) * 0.16),
+          (hh + Math.sin((T / hz) * Math.PI * 2) * 9 + 360) % 360,
+          ss * (1 + Math.sin((T / lz) * Math.PI * 2) * 0.10),
+          ll * swell * (1 + Math.sin((T / lz) * Math.PI * 2 + 1.1) * 0.10),
+          alpha,
         );
       };
-      const a = wander(readVar('--water-a', '#24505c'), 0);
-      const b = wander(readVar('--water-b', '#123240'), 1);
-      const d = wander(readVar('--water-c', '#071a25'), 2);
-      const glow = readVar('--water-glow', '#6fb3ad');
+      const depth = +readVar('--water-depth', '1') || 1;
+      const a = wander(readVar('--water-a', '#2f9fc4'), 0, 0.82 * depth);
+      const b = wander(readVar('--water-b', '#59c6c4'), 1, 0.5 * depth);
+      const d = wander(readVar('--water-c', '#9fe3c8'), 2, 0.18 * depth);
 
-      // The gradient axis swings too, so the light seems to move across the
-      // water instead of sitting in one corner.
-      const ax = w * (0.25 + Math.sin((T / 83) * Math.PI * 2) * 0.5);
-      const ay = h * (0.06 + Math.sin((T / 59) * Math.PI * 2) * 0.06);
-      const g = c.createLinearGradient(ax, ay, w - ax, h);
+      // Essentially vertical — depth runs top to bottom. Only the axis's lateral
+      // offset drifts, which slides the shading across without ever tilting the
+      // shallows up one side.
+      const ax = w * Math.sin((T / 83) * Math.PI * 2) * 0.22;
+      const g = c.createLinearGradient(ax, 0, -ax, h);
       g.addColorStop(0, a); g.addColorStop(0.55, b); g.addColorStop(1, d);
-      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      c.fillStyle = g;
+      c.fillRect(0, 0, w, h);
 
-      // The last of the daylight, all of it from above and none of it reaching
-      // the floor — that vertical falloff is most of what makes it read as
-      // depth rather than a dark pond.
-      c.globalAlpha = 0.34;
-      for (const [gx, gy, gr] of [[0.28, -0.08, 0.55], [0.72, -0.12, 0.45], [0.5, 0.02, 0.32]]) {
+      // Sun on the water, from above.
+      const glow = readVar('--water-glow', '#fff3cf');
+      // A highlight, not a haze — at 0.62 over a wide radius this bleached the
+      // whole frame into fog.
+      c.globalAlpha = 0.32;
+      for (const [gx, gy, gr] of [[0.34, -0.14, 0.44], [0.72, -0.18, 0.3]]) {
         const rg = c.createRadialGradient(w * gx, h * gy, 0, w * gx, h * gy, Math.max(w, h) * gr);
         rg.addColorStop(0, glow); rg.addColorStop(1, 'transparent');
         c.fillStyle = rg; c.fillRect(0, 0, w, h);
-      }
-      c.globalAlpha = 1;
-
-      // Things down there. Deliberately unresolved: soft dark masses with no
-      // readable edge, so you register a shape without ever identifying it.
-      // Anything crisper stops being ominous and starts being a logo.
-      const deep = readVar('--water-deep', '#04101a');
-      c.fillStyle = deep;
-      const shapes = [
-        [0.20, 0.74, 0.30, 0.20], [0.62, 0.86, 0.42, 0.24],
-        [0.86, 0.52, 0.22, 0.18], [0.42, 0.30, 0.18, 0.12],
-      ];
-      for (const [sx, sy, sw, sh] of shapes) {
-        c.globalAlpha = 0.30;
-        c.beginPath();
-        // Lumpy ellipse: radius wobbles with angle so nothing reads as a circle.
-        for (let a2 = 0; a2 <= Math.PI * 2 + 0.01; a2 += 0.25) {
-          const wob = 1 + Math.sin(a2 * 3 + sx * 9) * 0.18 + Math.sin(a2 * 5 + sy * 7) * 0.10;
-          const px = w * sx + Math.cos(a2) * w * sw * 0.5 * wob;
-          const py = h * sy + Math.sin(a2) * h * sh * 1.5 * wob;
-          a2 ? c.lineTo(px, py) : c.moveTo(px, py);
-        }
-        c.closePath();
-        c.fill();
-      }
-
-      // Kelp — slow vertical strands rising out of the dark.
-      c.strokeStyle = deep;
-      for (let i = 0; i < 9; i++) {
-        const bx = w * (0.06 + (i / 9) * 0.92) + Math.sin(i * 5.1) * w * 0.03;
-        const top = h * (0.30 + ((i * 37) % 40) / 100);
-        c.globalAlpha = 0.26;
-        c.lineWidth = Math.max(1.5, w / 130) * (0.6 + ((i * 13) % 7) / 10);
-        c.beginPath();
-        for (let y = h + 2; y > top; y -= 3) {
-          const k = (h - y) / h;
-          const px = bx + Math.sin(k * 5.5 + i * 2.3) * w * 0.035 * k;
-          y > h ? c.moveTo(px, y) : c.lineTo(px, y);
-        }
-        c.stroke();
       }
       c.globalAlpha = 1;
 
@@ -315,6 +468,8 @@ const { full = false } = Astro.props;
       img = ctx.createImageData(w, h);
       out = img.data;
       buildDamping();
+      buildCaustic();
+      buildFloor();
       buildTint();
       buildSource(performance.now());
       render(performance.now());
@@ -338,8 +493,12 @@ const { full = false } = Astro.props;
       const W = w, d = out;
       const still = reduceMq.matches;
       const ms = still ? 0 : (t || 0);
+      const ox = still ? 0 : Math.floor(ms * 0.0032) % W;
+      const oy = still ? 0 : Math.floor(ms * 0.0012) % h;
+      const camt = CAUST * (0.72 + 0.45 * breathEnv);
       for (let y = 1; y < h - 1; y++) {
         const row = y * W;
+        const crow = ((y + oy) % h) * W;
         for (let x = 1; x < W - 1; x++) {
           const i = row + x;
           const dx = cur[i - 1] - cur[i + 1];
@@ -353,9 +512,9 @@ const { full = false } = Astro.props;
           if (sy < 0) sy = 0; else if (sy >= h) sy = h - 1;
           const si = (sy * W + sx) << 2;
           const di = i << 2;
-          // Ripples now read purely as glints across the gradient — the veined
-          // caustic layer and the drawn currents both went, per "less busy".
-          const s = (dx + dy) * SPEC;
+          // Caustics are read at the REFRACTED column, so the light net bends
+          // with the surface instead of sliding over it like a decal.
+          const s = (dx + dy) * SPEC + (caust[crow + ((sx + ox) % W)] - CAUST_MID) * camt;
           d[di] = src[si] + s * tintR[x];
           d[di + 1] = src[si + 1] + s * tintG[x];
           d[di + 2] = src[si + 2] + s * tintB[x];

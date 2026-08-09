@@ -601,15 +601,16 @@ img { max-width: 100%; display: block; }
    the pool re-skins with the theme like everything else. Keep them here rather
    than hardcoded in the script. */
 .water-frame {
-  /* Deep water in BOTH themes — this is a dark window looking down, not a
-     surface lit from above, so it stays dark on the warm-paper page too. The
-     vertical run from --water-a to --water-c is the depth cue. */
-  --water-a: #24505c;   /* upper water, still holding light */
-  --water-b: #123240;   /* mid */
-  --water-c: #071a25;   /* down where it stops */
-  --water-deep: #030c14; /* the shapes below */
-  --water-glow: #6fb3ad; /* what's left of the daylight */
-  --water-ink: rgba(178, 222, 226, 0.34); /* reserved: no longer painted since the currents went */
+  /* Sunlit shallows over sand. The water colours MULTIPLY over the sand and
+     reef, so they read as a tint you're looking through rather than a surface
+     painted on top — keep them light or the floor disappears. */
+  --water-a: #1d9ec7;   /* the deeper end, top of frame */
+  --water-b: #4ec8c2;   /* mid */
+  --water-c: #9fe6c6;   /* the shallows, down at the sand */
+  --water-sand: #f2e3ba;
+  --water-depth: 1;     /* global multiplier on how much water sits over the sand */
+  --water-glow: #fff8dc; /* sun */
+  --water-ink: rgba(178, 222, 226, 0.34); /* reserved: no longer painted */
   /* Ripple crests and caustics are tinted across these three, left to right —
      the same terracotta → ochre → sage as --spectrum, so the pool glints in the
      site's accent rather than plain white. */
@@ -629,11 +630,19 @@ img { max-width: 100%; display: block; }
 }
 @media (prefers-color-scheme: dark) {
   .water-frame {
-    --water-a: #16333d;
-    --water-b: #0a1f29;
-    --water-c: #030e15;
-    --water-deep: #01070c;
-    --water-glow: #3f7d7c;
+    /* The same shallow at dusk — still sunlit and sandy, just turned down so it
+       doesn't glare out of a dark page. */
+    --water-a: #14647f;
+    --water-b: #2a8f92;
+    --water-c: #4fae9a;
+    /* Sand stays close to its light-mode value on purpose. The shell and coral
+       colours are fixed in the component, so darkening the sand here widened
+       the sand-to-shell contrast and the shells popped out as bright leaf
+       shapes. Dim the whole floor with more WATER instead (--water-depth),
+       which darkens sand and reef together and keeps their relationship. */
+    --water-sand: #e0cea4;
+    --water-depth: 1.34;
+    --water-glow: #e7d6a6;
     --water-ink: rgba(160, 205, 212, 0.28);
     --water-tint-a: #dd9077;
     --water-tint-b: #e0c07a;
@@ -650,10 +659,10 @@ img { max-width: 100%; display: block; }
   margin: 0; padding: 7px 16px; border-radius: 999px;
   /* The pool is deep water in both themes, so this can't take the page's paper
      colours — it'd be a bright chip floating on the dark. */
-  background: rgba(6, 20, 28, 0.5);
-  border: 1px solid rgba(178, 222, 226, 0.16);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(12, 59, 70, 0.14);
   backdrop-filter: blur(6px);
-  color: rgba(206, 232, 234, 0.82); font-size: 0.78rem;
+  color: rgba(10, 55, 66, 0.9); font-size: 0.78rem;
   letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
   pointer-events: none;
   transition: opacity 0.5s ease, transform 0.5s ease;
@@ -677,15 +686,21 @@ img { max-width: 100%; display: block; }
 }
 /* Recedes once you've touched the water — it's an invitation, not a headline. */
 .water-overlay.is-gone { opacity: 0.22; }
+/* Ink over the water. The pool is sunlit now, so this is DARK on light and
+   flips for the dusk palette — light-on-light was unreadable. */
 .water-overlay h1 {
-  margin: 0 0 12px; color: #dcefef;
+  margin: 0 0 12px; color: #0c3b46;
   font-size: clamp(2.1rem, 6vw, 3.6rem); font-weight: 400;
-  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+  text-shadow: 0 2px 26px rgba(255, 255, 255, 0.55);
 }
 .water-overlay p {
   margin: 0 auto; max-width: 46ch;
-  color: rgba(206, 232, 234, 0.78); font-size: 1.02rem;
-  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.6);
+  color: rgba(12, 59, 70, 0.82); font-size: 1.02rem;
+  text-shadow: 0 1px 16px rgba(255, 255, 255, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  .water-overlay h1 { color: #e4f3ef; text-shadow: 0 2px 26px rgba(0, 0, 0, 0.5); }
+  .water-overlay p { color: rgba(228, 243, 239, 0.82); text-shadow: 0 1px 16px rgba(0, 0, 0, 0.55); }
 }
 .water-frame--full .water-hint { bottom: 82px; }
 /* Spacing lives here, not as margin-top on the button: a flex item's margin
@@ -702,16 +717,26 @@ img { max-width: 100%; display: block; }
 }
 .water-link:hover { text-decoration: underline; }
 /* On the full page these sit ON the water, so they can't use page colours. */
-.water-foot--full .water-link { color: rgba(206, 232, 234, 0.85); }
-.water-foot--full .water-link:hover { color: #fff; }
+.water-foot--full .water-link { color: rgba(10, 55, 66, 0.9); }
+.water-foot--full .water-link:hover { color: #06272f; }
 .water-foot--full .water-btn {
-  background: rgba(6, 20, 28, 0.55);
-  border-color: rgba(178, 222, 226, 0.28);
-  color: rgba(214, 238, 240, 0.92);
+  background: rgba(255, 255, 255, 0.62);
+  border-color: rgba(12, 59, 70, 0.18);
+  color: rgba(10, 55, 66, 0.95);
   backdrop-filter: blur(6px);
 }
 .water-foot--full .water-btn:hover {
-  background: rgba(10, 32, 42, 0.75); border-color: rgba(178, 222, 226, 0.5); color: #fff;
+  background: rgba(255, 255, 255, 0.82); border-color: rgba(12, 59, 70, 0.34); color: #06272f;
+}
+@media (prefers-color-scheme: dark) {
+  .water-hint { background: rgba(6, 26, 30, 0.5); border-color: rgba(178, 222, 226, 0.18); color: rgba(214, 238, 236, 0.86); }
+  .water-foot--full .water-link { color: rgba(214, 238, 236, 0.88); }
+  .water-foot--full .water-link:hover { color: #fff; }
+  .water-foot--full .water-btn {
+    background: rgba(6, 26, 30, 0.55); border-color: rgba(178, 222, 226, 0.28);
+    color: rgba(219, 240, 238, 0.94);
+  }
+  .water-foot--full .water-btn:hover { background: rgba(9, 38, 44, 0.75); color: #fff; }
 }
 @media (max-width: 560px) {
   .water-overlay p { font-size: 0.94rem; }
