@@ -659,8 +659,69 @@ img { max-width: 100%; display: block; }
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
 .water-hint.is-gone { opacity: 0; transform: translate(-50%, 8px); }
+/* ---------- Full-page variant (/still) ---------- */
+.main--bleed { padding-block: 0; }
+.water-section--full { position: relative; margin: 0; }
+.water-frame--full {
+  /* Fills what's left under the sticky header. vh first as the fallback for
+     engines without svh; svh keeps mobile browser chrome from causing a jump. */
+  height: calc(100vh - var(--header-h));
+  height: calc(100svh - var(--header-h));
+  border-radius: 0; border-left: none; border-right: none; border-top: none;
+}
+.water-overlay {
+  position: absolute; left: 0; right: 0; top: 0;
+  padding: clamp(26px, 7vh, 70px) 24px 0;
+  text-align: center; pointer-events: none;
+  transition: opacity 0.7s ease;
+}
+/* Recedes once you've touched the water — it's an invitation, not a headline. */
+.water-overlay.is-gone { opacity: 0.22; }
+.water-overlay h1 {
+  margin: 0 0 12px; color: #dcefef;
+  font-size: clamp(2.1rem, 6vw, 3.6rem); font-weight: 400;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.55);
+}
+.water-overlay p {
+  margin: 0 auto; max-width: 46ch;
+  color: rgba(206, 232, 234, 0.78); font-size: 1.02rem;
+  text-shadow: 0 1px 18px rgba(0, 0, 0, 0.6);
+}
+.water-frame--full .water-hint { bottom: 82px; }
+/* Spacing lives here, not as margin-top on the button: a flex item's margin
+   counts toward the container's box, so the button's old margin made .water-foot
+   start 14px higher than anything visible and collide with the hint. */
+.water-foot { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.water-foot--full {
+  position: absolute; left: 0; right: 0; bottom: clamp(16px, 4vh, 38px);
+  justify-content: center;
+}
+.water-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.9rem; font-weight: 600; color: var(--accent);
+}
+.water-link:hover { text-decoration: underline; }
+/* On the full page these sit ON the water, so they can't use page colours. */
+.water-foot--full .water-link { color: rgba(206, 232, 234, 0.85); }
+.water-foot--full .water-link:hover { color: #fff; }
+.water-foot--full .water-btn {
+  background: rgba(6, 20, 28, 0.55);
+  border-color: rgba(178, 222, 226, 0.28);
+  color: rgba(214, 238, 240, 0.92);
+  backdrop-filter: blur(6px);
+}
+.water-foot--full .water-btn:hover {
+  background: rgba(10, 32, 42, 0.75); border-color: rgba(178, 222, 226, 0.5); color: #fff;
+}
+@media (max-width: 560px) {
+  .water-overlay p { font-size: 0.94rem; }
+  .water-foot--full { flex-direction: column; gap: 10px; }
+  .water-frame--full .water-hint { bottom: 122px; }
+}
+@media (prefers-reduced-motion: reduce) { .water-overlay { transition: none; } }
+
 .water-btn {
-  margin-top: 14px; cursor: pointer;
+  cursor: pointer;
   padding: 9px 18px; border-radius: 999px;
   background: transparent; border: 1px solid var(--border-strong);
   color: var(--text-soft); font: inherit; font-size: 0.9rem; font-weight: 500;
@@ -879,6 +940,10 @@ img { max-width: 100%; display: block; }
   .nav-toggle { margin-left: auto; }
   .trad-row-region { display: none; } /* keep index rows to name + arrow */
   .trad-row { gap: 12px; }
-  /* 44vh on a tall phone makes the pool a near-square slab — keep it a pool. */
-  .water-frame { height: clamp(230px, 34vh, 320px); }
+  /* 44vh on a tall phone makes the pool a near-square slab — keep it a pool.
+     :not() is load-bearing. This rule lives in the responsive block at the
+     bottom of the file, so a bare .water-frame would beat .water-frame--full on
+     source order and squash the full-page pool to 320px. Same trap as
+     .card-grid--tight — single-class modifiers lose to anything later. */
+  .water-frame:not(.water-frame--full) { height: clamp(230px, 34vh, 320px); }
 }

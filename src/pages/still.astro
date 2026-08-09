@@ -1,0 +1,14 @@
+---
+import Base from '../layouts/Base.astro';
+import StillWater from '../components/StillWater.astro';
+
+// `bleed` drops the centred wrap and page padding so the pool can run edge to
+// edge; the header stays so nobody gets stranded here.
+---
+<Base
+  title="Still water — Traditions"
+  description="A quiet page. Deep water, glowing motes, and rain on a slow four-in, six-out breath. Touch the surface and watch it settle."
+  bleed
+>
+  <StillWater full />
+</Base>

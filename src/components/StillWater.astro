@@ -34,24 +34,50 @@
  * there's no rain, no drift and no idle loop — it renders still, and only a
  * deliberate tap stirs it, running just long enough to settle again.
  */
+import Icon from './Icon.astro';
+import { url } from '../utils';
+
+interface Props {
+  /** Fill the viewport on its own page instead of sitting in a card. */
+  full?: boolean;
+}
+const { full = false } = Astro.props;
 ---
 
-<section class="section water-section" id="still-water">
-  <div class="section-head">
-    <h2 class="section-title">Still water</h2>
-    <p class="section-note">
-      A place to do nothing in particular. Touch the surface and watch it settle —
-      the oldest instruction in half these traditions. The rain keeps a slow
-      four-in, six-out rhythm; breathe along with it if you like.
-    </p>
-  </div>
+<section class:list={['water-section', full ? 'water-section--full' : 'section']} id="still-water">
+  {!full && (
+    <div class="section-head">
+      <h2 class="section-title">Still water</h2>
+      <p class="section-note">
+        A place to do nothing in particular. Touch the surface and watch it settle —
+        the oldest instruction in half these traditions. The rain keeps a slow
+        four-in, six-out rhythm; breathe along with it if you like.
+      </p>
+    </div>
+  )}
 
-  <div class="water-frame" id="water-frame">
+  <div class:list={['water-frame', full && 'water-frame--full']} id="water-frame">
     <canvas class="water-canvas" id="water-canvas" aria-hidden="true"></canvas>
+
+    {full && (
+      <div class="water-overlay" id="water-overlay">
+        <h1>Still water</h1>
+        <p>
+          Nothing to finish here. The rain keeps a slow four-in, six-out rhythm —
+          breathe along with it, or just watch the light move.
+        </p>
+      </div>
+    )}
+
     <p class="water-hint" id="water-hint" aria-hidden="true">touch the water</p>
   </div>
 
-  <button type="button" class="water-btn" id="water-drop">Drop a stone</button>
+  <div class:list={['water-foot', full && 'water-foot--full']}>
+    <button type="button" class="water-btn" id="water-drop">Drop a stone</button>
+    {full
+      ? <a href={url()} class="water-link"><Icon name="arrow-left" size={15} /> Back to the guide</a>
+      : <a href={url('still')} class="water-link">Open it full screen <Icon name="arrow-right" size={15} /></a>}
+  </div>
 </section>
 
 <script is:inline>
@@ -453,8 +479,12 @@
       start();
     }
 
+    // First touch dismisses the invitation: the hint goes, and on the full page
+    // the title recedes so the water has the screen to itself.
+    const overlay = document.getElementById('water-overlay');
     function mark() {
-      if (hint && !hint.classList.contains('is-gone')) hint.classList.add('is-gone');
+      hint?.classList.add('is-gone');
+      overlay?.classList.add('is-gone');
     }
 
     /* ---------- loop ---------- */

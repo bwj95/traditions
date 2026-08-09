@@ -11,11 +11,14 @@ interface Props {
   description?: string;
   /** category id when a category page is active, for nav highlighting */
   activeCategory?: string;
+  /** drop the centred wrap + page padding so a page can run edge to edge */
+  bleed?: boolean;
 }
 const {
   title = 'Traditions — a world wellness guide',
   description = 'Nine wellness traditions and their techniques — meditation, movement, breath, and food-as-medicine — honored where they come from.',
   activeCategory,
+  bleed = false,
 } = Astro.props;
 ---
 <!doctype html>
@@ -92,6 +95,10 @@ const {
               <Icon name="search" size={18} class="nav-panel-icon" />
               <span class="nav-panel-label">Search practices</span>
             </a>
+            <a href={url('still')} class="nav-panel-link nav-panel-link--minor">
+              <Icon name="waves" size={18} class="nav-panel-icon" />
+              <span class="nav-panel-label">Still water</span>
+            </a>
             <a href={url('credits')} class="nav-panel-link nav-panel-link--minor">
               <Icon name="info" size={18} class="nav-panel-icon" />
               <span class="nav-panel-label">Image credits</span>
@@ -100,7 +107,7 @@ const {
         </div>
       </header>
 
-      <main class="wrap main">
+      <main class:list={[bleed ? 'main main--bleed' : 'wrap main']}>
         <slot />
       </main>
 
@@ -109,6 +116,7 @@ const {
           <div class="footer-links">
             <a href={url()}>Home</a>
             <a href={url('search')}>Search</a>
+            <a href={url('still')}>Still water</a>
             <a href={url('credits')}>Image credits</a>
           </div>
           <p class="disclaimer">
