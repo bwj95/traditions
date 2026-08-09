@@ -601,11 +601,15 @@ img { max-width: 100%; display: block; }
    the pool re-skins with the theme like everything else. Keep them here rather
    than hardcoded in the script. */
 .water-frame {
-  --water-a: #d9e7de;   /* shallows, top-left */
-  --water-b: #a9c6c1;   /* mid */
-  --water-c: #6f9490;   /* depth */
-  --water-glow: #f0e2c2; /* sunlight off to one side */
-  --water-ink: rgba(255, 255, 255, 0.62); /* currents, rings, the word */
+  /* Deep water in BOTH themes — this is a dark window looking down, not a
+     surface lit from above, so it stays dark on the warm-paper page too. The
+     vertical run from --water-a to --water-c is the depth cue. */
+  --water-a: #24505c;   /* upper water, still holding light */
+  --water-b: #123240;   /* mid */
+  --water-c: #071a25;   /* down where it stops */
+  --water-deep: #030c14; /* the shapes below */
+  --water-glow: #6fb3ad; /* what's left of the daylight */
+  --water-ink: rgba(178, 222, 226, 0.34); /* currents and kelp */
   /* Ripple crests and caustics are tinted across these three, left to right —
      the same terracotta → ochre → sage as --spectrum, so the pool glints in the
      site's accent rather than plain white. */
@@ -625,11 +629,12 @@ img { max-width: 100%; display: block; }
 }
 @media (prefers-color-scheme: dark) {
   .water-frame {
-    --water-a: #1b3330;
-    --water-b: #12262a;
-    --water-c: #0a171c;
-    --water-glow: #3c5c53;
-    --water-ink: rgba(190, 226, 214, 0.5);
+    --water-a: #16333d;
+    --water-b: #0a1f29;
+    --water-c: #030e15;
+    --water-deep: #01070c;
+    --water-glow: #3f7d7c;
+    --water-ink: rgba(160, 205, 212, 0.28);
     --water-tint-a: #dd9077;
     --water-tint-b: #e0c07a;
     --water-tint-c: #9db386;
@@ -643,9 +648,12 @@ img { max-width: 100%; display: block; }
 .water-hint {
   position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
   margin: 0; padding: 7px 16px; border-radius: 999px;
-  background: color-mix(in srgb, var(--bg-elev) 72%, transparent);
+  /* The pool is deep water in both themes, so this can't take the page's paper
+     colours — it'd be a bright chip floating on the dark. */
+  background: rgba(6, 20, 28, 0.5);
+  border: 1px solid rgba(178, 222, 226, 0.16);
   backdrop-filter: blur(6px);
-  color: var(--text-soft); font-size: 0.78rem;
+  color: rgba(206, 232, 234, 0.82); font-size: 0.78rem;
   letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
   pointer-events: none;
   transition: opacity 0.5s ease, transform 0.5s ease;
