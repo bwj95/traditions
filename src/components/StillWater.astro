@@ -1,0 +1,334 @@
+---
+/*
+ * StillWater — an interactive pool. Tap, drag or let it rain; ripples spread,
+ * reflect off the edges and slowly settle.
+ *
+ * This is a real 2D wave simulation, not expanding CSS circles. Two height
+ * buffers hold the water surface; each frame every cell becomes the average of
+ * its four neighbours minus its own previous height, damped slightly — the
+ * discrete form of the wave equation. That one line is what gives genuine
+ * interference, edge reflection and decay for free; faked rings can't do any
+ * of it.
+ *
+ * Rendering refracts rather than draws: the local height *gradient* offsets
+ * which source pixel each output pixel samples, so the artwork underneath
+ * genuinely bends. The gradient doubles as a specular term for the glints.
+ *
+ * The backing store is deliberately half CSS resolution and upscaled by the
+ * browser — quarter the pixels to push, and the resulting softness reads as
+ * depth. DPR is irrelevant for the same reason.
+ *
+ * Canvas + JS (not experimental CSS) so it works in every engine. Decorative:
+ * canvas is aria-hidden and the "Drop a stone" button gives keyboard and
+ * assistive-tech users the same interaction. Under prefers-reduced-motion
+ * there's no rain and no idle loop — it renders still, and only a deliberate
+ * tap stirs it, running just long enough to settle again.
+ */
+---
+
+<section class="section water-section" id="still-water">
+  <div class="section-head">
+    <h2 class="section-title">Still water</h2>
+    <p class="section-note">
+      A place to do nothing in particular. Touch the surface and watch it settle —
+      the oldest instruction in half these traditions.
+    </p>
+  </div>
+
+  <div class="water-frame" id="water-frame">
+    <canvas class="water-canvas" id="water-canvas" aria-hidden="true"></canvas>
+    <p class="water-hint" id="water-hint" aria-hidden="true">touch the water</p>
+  </div>
+
+  <button type="button" class="water-btn" id="water-drop">Drop a stone</button>
+</section>
+
+<script is:inline>
+  (() => {
+    const frame = document.getElementById('water-frame');
+    const canvas = document.getElementById('water-canvas');
+    const hint = document.getElementById('water-hint');
+    const button = document.getElementById('water-drop');
+    if (!frame || !canvas || !canvas.getContext) return;
+
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const reduceMq = matchMedia('(prefers-reduced-motion: reduce)');
+    const darkMq = matchMedia('(prefers-color-scheme: dark)');
+    const fineMq = matchMedia('(pointer: fine)');
+
+    // Sim runs at 1/SCALE of CSS pixels; the browser upscales the canvas.
+    //
+    // SCALE/STEPS/DAMP are one tuning problem, not three knobs. The wave front
+    // moves exactly one cell per step, so its speed is SCALE*STEPS css px per
+    // frame — 6px here, ~360px/s, about how a real pond spreads. DAMP sets how
+    // far a ripple gets before dying: amplitude halves every ~ln(0.5)/ln(DAMP)
+    // steps, so 0.995 buys ~138 steps ≈ 830px of travel. At the first pass
+    // (SCALE 2 / 1 step / 0.985) ripples crawled at 2px per frame and faded
+    // inside ~300px, which on a 1000px pool read as a dud puddle.
+    const SCALE = 3;
+    const STEPS = 2;      // sim steps per frame
+    const DAMP = 0.995;   // <1 or energy never leaves; too low and ripples thud out
+    const REFRACT = 2.6;  // how far the height gradient bends the source
+    const SPEC = 14;      // glint strength from the same gradient
+    // Peak |height| below which reduced-motion stops. Must be a PEAK, not a
+    // mean: one stone's energy averaged over ~47k cells is ~0.014, so a mean
+    // test declared the pool settled on the frame the stone landed and the
+    // ripple never animated at all.
+    const SETTLED = 0.03;
+
+    let w = 0, h = 0;
+    let cur, prv, src, img, out;
+    let raf = 0, visible = false, nextRain = 0, lastTrail = 0;
+
+    const readVar = (name, fallback) =>
+      getComputedStyle(frame).getPropertyValue(name).trim() || fallback;
+
+    /* ---------- the artwork the ripples distort ---------- */
+    function buildSource() {
+      if (!w || !h) return;
+      const off = document.createElement('canvas');
+      off.width = w; off.height = h;
+      const c = off.getContext('2d');
+
+      const a = readVar('--water-a', '#cfe0d8');
+      const b = readVar('--water-b', '#a8c4bd');
+      const d = readVar('--water-c', '#7d9c96');
+      const glow = readVar('--water-glow', '#e8d9b8');
+      const ink = readVar('--water-ink', 'rgba(255,255,255,0.5)');
+
+      const g = c.createLinearGradient(0, 0, w * 0.25, h);
+      g.addColorStop(0, a); g.addColorStop(0.55, b); g.addColorStop(1, d);
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+
+      // Warm shafts of light, as if the sun is off to one side.
+      c.globalAlpha = 0.5;
+      for (const [gx, gy, gr] of [[0.22, 0.18, 0.5], [0.78, 0.72, 0.42], [0.55, 0.3, 0.3]]) {
+        const rg = c.createRadialGradient(w * gx, h * gy, 0, w * gx, h * gy, Math.max(w, h) * gr);
+        rg.addColorStop(0, glow); rg.addColorStop(1, 'transparent');
+        c.fillStyle = rg; c.fillRect(0, 0, w, h);
+      }
+      c.globalAlpha = 1;
+
+      // Slow currents — the refraction needs structure to grab onto, otherwise
+      // a flat gradient bends into something indistinguishable from itself.
+      c.strokeStyle = ink;
+      c.lineWidth = Math.max(1, h / 130);
+      for (let i = 0; i < 11; i++) {
+        const base = (h / 11) * (i + 0.5);
+        // Amplitude has to be a real fraction of the height or these read as
+        // scan lines rather than currents — the first pass used h*0.03, ~2px,
+        // which drew eleven straight rules across the pool.
+        const amp = h * 0.11 * (0.55 + (i % 3) * 0.35);
+        c.globalAlpha = 0.13 + (i % 4) * 0.045;
+        c.beginPath();
+        for (let x = 0; x <= w; x += 3) {
+          const y = base + Math.sin(x / (w / 2.1) + i * 1.7) * amp
+                         + Math.sin(x / (w / 5.3) + i * 0.6) * amp * 0.45
+                         + Math.sin(x / (w / 11) + i) * amp * 0.16;
+          x ? c.lineTo(x, y) : c.moveTo(x, y);
+        }
+        c.stroke();
+      }
+
+      // Concentric rings, faint — a pond remembering an older stone.
+      c.globalAlpha = 0.12;
+      for (let r = 1; r <= 6; r++) {
+        c.beginPath();
+        c.arc(w * 0.68, h * 0.55, (Math.min(w, h) / 9) * r, 0, Math.PI * 2);
+        c.stroke();
+      }
+
+      // A word under the surface. Drawn into the source so the ripples
+      // genuinely distort it; the real heading lives in the DOM above.
+      c.globalAlpha = 0.24;
+      c.fillStyle = ink;
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.font = `italic 400 ${Math.round(Math.min(w * 0.17, h * 0.5))}px Sentient, Georgia, serif`;
+      c.fillText('still', w * 0.5, h * 0.52);
+      c.globalAlpha = 1;
+
+      src = c.getImageData(0, 0, w, h).data;
+      if (out) out.set(src); // seed the 1px border the render loop never writes
+    }
+
+    function resize() {
+      const cw = frame.clientWidth, ch = frame.clientHeight;
+      if (!cw || !ch) return;
+      const nw = Math.max(32, Math.round(cw / SCALE));
+      const nh = Math.max(32, Math.round(ch / SCALE));
+      if (nw === w && nh === h) return;
+      w = nw; h = nh;
+      canvas.width = w; canvas.height = h;
+      cur = new Float32Array(w * h);
+      prv = new Float32Array(w * h);
+      img = ctx.createImageData(w, h);
+      out = img.data;
+      buildSource();
+      render();
+    }
+
+    /* ---------- wave equation ---------- */
+    function step() {
+      const W = w;
+      for (let y = 1; y < h - 1; y++) {
+        const row = y * W;
+        for (let x = 1; x < W - 1; x++) {
+          const i = row + x;
+          prv[i] = ((cur[i - 1] + cur[i + 1] + cur[i - W] + cur[i + W]) * 0.5 - prv[i]) * DAMP;
+        }
+      }
+      const t = cur; cur = prv; prv = t; // new state lands in cur
+    }
+
+    function render() {
+      if (!src) return;
+      const W = w, d = out;
+      for (let y = 1; y < h - 1; y++) {
+        const row = y * W;
+        for (let x = 1; x < W - 1; x++) {
+          const i = row + x;
+          const dx = cur[i - 1] - cur[i + 1];
+          const dy = cur[i - W] - cur[i + W];
+          // Round, don't truncate: |0 rounds toward zero, so positive and
+          // negative offsets quantize in opposite directions and the crests
+          // tear into little horizontal steps.
+          let sx = x + Math.round(dx * REFRACT);
+          let sy = y + Math.round(dy * REFRACT);
+          if (sx < 0) sx = 0; else if (sx >= W) sx = W - 1;
+          if (sy < 0) sy = 0; else if (sy >= h) sy = h - 1;
+          const si = (sy * W + sx) << 2;
+          const di = i << 2;
+          const s = (dx + dy) * SPEC;
+          d[di] = src[si] + s;
+          d[di + 1] = src[si + 1] + s;
+          d[di + 2] = src[si + 2] + s;
+          d[di + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    /* ---------- disturbances ---------- */
+    function drop(cx, cy, radius, strength) {
+      const r = Math.max(1, radius | 0);
+      for (let y = -r; y <= r; y++) {
+        for (let x = -r; x <= r; x++) {
+          const dist = Math.sqrt(x * x + y * y);
+          if (dist > r) continue;
+          const gx = (cx | 0) + x, gy = (cy | 0) + y;
+          if (gx < 1 || gy < 1 || gx >= w - 1 || gy >= h - 1) continue;
+          // Cosine falloff — a hard-edged disc rings like a struck bell.
+          cur[gy * w + gx] += strength * (Math.cos((dist / r) * Math.PI) + 1) * 0.5;
+        }
+      }
+    }
+
+    const atEvent = (e) => {
+      const r = frame.getBoundingClientRect();
+      return [((e.clientX - r.left) / r.width) * w, ((e.clientY - r.top) / r.height) * h];
+    };
+
+    function stir(cx, cy, big) {
+      drop(cx, cy, big ? Math.max(5, w / 38) : Math.max(2, w / 110), big ? -5.2 : -1.1);
+      start();
+    }
+
+    function mark() {
+      if (hint && !hint.classList.contains('is-gone')) hint.classList.add('is-gone');
+    }
+
+    /* ---------- loop ---------- */
+    const settled = () => {
+      let peak = 0;
+      for (let i = 0; i < cur.length; i += 7) {
+        const v = cur[i] < 0 ? -cur[i] : cur[i];
+        if (v > peak) { if (v >= SETTLED) return false; peak = v; }
+      }
+      return peak < SETTLED;
+    };
+
+    function tick(t) {
+      if (!visible) { raf = 0; return; }
+      if (reduceMq.matches && settled()) { raf = 0; render(); return; }
+      if (!reduceMq.matches && t > nextRain) {
+        drop(20 + Math.random() * (w - 40), 20 + Math.random() * (h - 40),
+             Math.max(2, w / 105), -1.1 - Math.random() * 1.5);
+        nextRain = t + 1300 + Math.random() * 3000;
+      }
+      for (let i = 0; i < STEPS; i++) step();
+      render();
+      raf = requestAnimationFrame(tick);
+    }
+
+    function start() {
+      if (!raf && visible) raf = requestAnimationFrame(tick);
+    }
+    function stop() {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0;
+    }
+
+    /* ---------- wiring ---------- */
+    frame.addEventListener('pointerdown', (e) => {
+      const [x, y] = atEvent(e); mark(); stir(x, y, true);
+    });
+    frame.addEventListener('pointermove', (e) => {
+      if (reduceMq.matches || !fineMq.matches || e.pointerType === 'touch') return;
+      const now = performance.now();
+      if (now - lastTrail < 55) return; // a drop every frame is a firehose
+      lastTrail = now;
+      const [x, y] = atEvent(e); stir(x, y, false);
+    }, { passive: true });
+    // Touch drags should paint ripples without also scrolling the page.
+    frame.addEventListener('touchmove', (e) => {
+      const t = e.touches[0];
+      if (!t) return;
+      e.preventDefault();
+      const now = performance.now();
+      if (now - lastTrail < 55) return;
+      lastTrail = now;
+      const [x, y] = atEvent(t); stir(x, y, false);
+    }, { passive: false });
+
+    button?.addEventListener('click', () => {
+      mark();
+      stir(w * (0.25 + Math.random() * 0.5), h * (0.25 + Math.random() * 0.5), true);
+    });
+
+    // Only animate while on screen — an idle rAF loop behind the fold is pure
+    // battery burn.
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver((entries) => {
+        visible = entries[0].isIntersecting;
+        if (visible) { nextRain = performance.now() + 400; if (!reduceMq.matches) start(); }
+        else stop();
+      }, { threshold: 0.05 }).observe(frame);
+    } else {
+      visible = true;
+      if (!reduceMq.matches) start();
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stop();
+      else if (visible && !reduceMq.matches) start();
+    });
+
+    if ('ResizeObserver' in window) {
+      let deb;
+      new ResizeObserver(() => { clearTimeout(deb); deb = setTimeout(resize, 120); }).observe(frame);
+    } else {
+      window.addEventListener('resize', resize, { passive: true });
+    }
+
+    darkMq.addEventListener?.('change', () => { buildSource(); render(); });
+    reduceMq.addEventListener?.('change', () => {
+      stop();
+      if (!reduceMq.matches && visible) start(); else render();
+    });
+    // Canvas text takes whatever font is loaded at draw time — redraw once
+    // Sentient is actually available, or the word renders in Georgia.
+    document.fonts?.ready.then(() => { buildSource(); render(); });
+
+    resize();
+  })();
+</script>
