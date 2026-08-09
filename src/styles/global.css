@@ -1,33 +1,33 @@
 /* ============================================================
-   Fonts — self-hosted from Fontshare (free, commercial). Zodiak = chiseled
-   editorial serif for display; General Sans = clean UI/body sans. woff2 only,
-   swap. Zodiak has no 500 and no true italic on Fontshare — use 400/700 and
-   never rely on font-style:italic for it (faux-slant looks bad on a serif).
+   Fonts — self-hosted VARIABLE woff2, subsetted to Latin from the Fontshare
+   "Complete" packs in Cooking/Ingredients/Fonts.
+
+   Sentient (display) = warm literary serif with a REAL italic and a continuous
+   200–700 weight axis — replaces Zodiak, which shipped no 500 and no true
+   italic and forced workarounds all over this sheet.
+   Satoshi (body) = warm geometric sans, 300–900 axis, replaces three static
+   General Sans cuts.
+
+   Why variable + subset: 3 files / ~121KB covering every weight, instead of 5
+   static files / 110KB covering five. Subsetted with
+   `python3 -m fontTools.subset <in> --unicodes=... --layout-features='*'
+    --flavor=woff2` — keep --layout-features or kerning dies, and don't pass
+   any instancer flag or the wght axis is flattened away.
    ============================================================ */
 @font-face {
-  font-family: 'Zodiak';
-  src: url('/traditions/fonts/zodiak-400.woff2') format('woff2');
-  font-weight: 400; font-style: normal; font-display: swap;
+  font-family: 'Sentient';
+  src: url('/traditions/fonts/sentient-var.woff2') format('woff2');
+  font-weight: 200 700; font-style: normal; font-display: swap;
 }
 @font-face {
-  font-family: 'Zodiak';
-  src: url('/traditions/fonts/zodiak-700.woff2') format('woff2');
-  font-weight: 700; font-style: normal; font-display: swap;
+  font-family: 'Sentient';
+  src: url('/traditions/fonts/sentient-var-italic.woff2') format('woff2');
+  font-weight: 200 700; font-style: italic; font-display: swap;
 }
 @font-face {
-  font-family: 'General Sans';
-  src: url('/traditions/fonts/general-sans-400.woff2') format('woff2');
-  font-weight: 400; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'General Sans';
-  src: url('/traditions/fonts/general-sans-500.woff2') format('woff2');
-  font-weight: 500; font-style: normal; font-display: swap;
-}
-@font-face {
-  font-family: 'General Sans';
-  src: url('/traditions/fonts/general-sans-600.woff2') format('woff2');
-  font-weight: 600; font-style: normal; font-display: swap;
+  font-family: 'Satoshi';
+  src: url('/traditions/fonts/satoshi-var.woff2') format('woff2');
+  font-weight: 300 900; font-style: normal; font-display: swap;
 }
 
 /* ============================================================
@@ -55,8 +55,14 @@
   --radius: 16px;
   --radius-lg: 22px;
   --wrap: 1120px;
-  --font-display: 'Zodiak', ui-serif, Georgia, 'Times New Roman', serif;
-  --font-sans: 'General Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Sentient', ui-serif, Georgia, 'Times New Roman', serif;
+  --font-sans: 'Satoshi', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Fixed chrome heights — the home hero subtracts these so the next section
+     starts fully below the fold instead of peeking in. Keep in sync with
+     .topbar / .site-header / .main if any of those change. */
+  --topbar-h: 40px;   /* border-box, border included */
+  --header-h: 65px;   /* 64px .header-inner + 1px border-bottom */
+  --main-pad-top: 40px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,7 +100,7 @@ body {
 h1, h2, h3 {
   font-family: var(--font-display);
   line-height: 1.12;
-  font-weight: 400; /* Zodiak Regular reads as display weight; no 500 exists */
+  font-weight: 500; /* Sentient's axis is continuous — 500 has presence without shouting */
   letter-spacing: -0.01em;
 }
 
@@ -109,7 +115,30 @@ img { max-width: 100%; display: block; }
 }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.main { flex: 1; padding-block: 40px 80px; }
+.main { flex: 1; padding-block: var(--main-pad-top) 80px; }
+
+/* ---------- Top bar (home only) — full-bleed reset marquee above the nav ----
+   Sits in normal flow ABOVE the sticky header, so it scrolls away for good and
+   the header alone sticks. Filled via <slot name="topbar"> in Base.astro. */
+.topbar {
+  height: var(--topbar-h);
+  display: flex; align-items: center; gap: 14px;
+  padding-inline: 16px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border);
+}
+.topbar-tag {
+  flex: 0 0 auto; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--accent-ink);
+  white-space: nowrap;
+}
+.topbar-tag svg { color: var(--accent); }
+.topbar-tag:hover { color: var(--accent); }
+.topbar .reset-marquee { align-self: stretch; display: flex; align-items: center; }
+@media (max-width: 560px) {
+  .topbar-tag span { display: none; } /* icon-only label; the reel keeps the room */
+}
 
 /* ---------- Header (auto-hides on scroll down, returns on scroll up) ---------- */
 .site-header {
@@ -124,7 +153,7 @@ img { max-width: 100%; display: block; }
 .brand {
   display: flex; align-items: center; gap: 9px;
   font-family: var(--font-display);
-  font-weight: 700; font-size: 1.25rem;
+  font-weight: 600; font-size: 1.3rem; letter-spacing: -0.005em;
   color: var(--accent-ink); white-space: nowrap;
 }
 .brand .brand-mark { color: var(--accent); }
@@ -158,17 +187,26 @@ img { max-width: 100%; display: block; }
 .footer-links { display: flex; gap: 16px; margin-bottom: 12px; font-size: 0.88rem; }
 .footer-links a { color: var(--text-soft); font-weight: 500; }
 .footer-links a:hover { color: var(--accent); }
-.disclaimer { margin: 0 0 6px; font-size: 0.88rem; color: var(--text-soft); font-style: italic; }
+/* Real serif italic now that the display face has one — reads as an editorial
+   note rather than a faux-slanted sans. */
+.disclaimer {
+  margin: 0 0 6px; font-size: 0.95rem; color: var(--text-soft);
+  font-family: var(--font-display); font-style: italic;
+}
 .attribution { margin: 0; font-size: 0.82rem; color: var(--text-faint); }
 
 /* ---------- Home hero ---------- */
-/* Fills the first screen: copy floats mid-viewport, the space below stays
-   empty so the meadow grass reads as part of the home screen. Categories
-   start just past the fold. svh with vh fallback. */
+/* Fills exactly the first screen: copy floats mid-viewport, the space below
+   stays empty so the meadow grass reads as part of the home screen.
+   The subtraction is every fixed thing stacked above the hero — topbar +
+   header + .main's top padding — so the hero's bottom edge lands ON the fold
+   and "Browse by category" is fully offscreen (it used to poke its ascenders
+   in). box-sizing:border-box means the paddings below count inside min-height.
+   svh with a vh fallback for older engines. */
 .hero {
   position: relative; padding: 24px 0; max-width: 760px;
-  min-height: calc(100vh - 190px);
-  min-height: calc(100svh - 190px);
+  min-height: calc(100vh - var(--topbar-h) - var(--header-h) - var(--main-pad-top));
+  min-height: calc(100svh - var(--topbar-h) - var(--header-h) - var(--main-pad-top));
   display: flex; flex-direction: column; justify-content: center;
   padding-bottom: 8vh;
 }
@@ -189,11 +227,15 @@ img { max-width: 100%; display: block; }
   to { transform: translate3d(3%, 2%, 0) scale(1.09); }
 }
 @media (prefers-reduced-motion: reduce) { .hero-glow { animation: none; } }
-.hero h1 { font-size: clamp(2.4rem, 6vw, 3.8rem); margin: 0 0 18px; font-weight: 400; }
-/* Hero keyword painted with the earthy spectrum (like the workbench hero, but
-   Traditions' tones). No italic — Zodiak has no true italic face. */
+.hero h1 {
+  font-size: clamp(2.4rem, 6vw, 3.9rem); margin: 0 0 18px;
+  font-weight: 400; letter-spacing: -0.018em;
+}
+/* Hero keyword: real Sentient italic (the reason for the font swap — Zodiak
+   had no italic face at all) painted with the earthy spectrum. */
 .hero h1 em {
-  font-style: normal;
+  font-style: italic;
+  font-weight: 500;
   background: var(--spectrum);
   -webkit-background-clip: text;
   background-clip: text;
@@ -361,21 +403,24 @@ img { max-width: 100%; display: block; }
 .workprev.show { opacity: 1; transform: translate(-50%, -112%) scale(1) rotate(-1.2deg); }
 .workprev img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
-/* ---------- 5-Minute Reset banner (marquee + expand) ---------- */
-.reset-banner {
-  display: flex; align-items: center; gap: 12px;
-  padding: 9px 9px 9px 18px; margin-bottom: 20px;
-  background: var(--bg-elev); border: 1px solid var(--border);
-  border-radius: 999px; box-shadow: var(--shadow);
+/* ---------- 5-Minute Reset (heading row + expand; the reel lives in .topbar) --- */
+.reset-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
 }
+/* The topbar tag links here — clear the sticky header on jump. */
+#five-minute-reset { scroll-margin-top: calc(var(--header-h) + 16px); }
 .reset-marquee {
   flex: 1;
   min-width: 0; /* REQUIRED: clip isn't a scroll container, so min-width:auto
                    would size to the track and shove the button off-screen */
   overflow: hidden;
   overflow: clip; /* clip > hidden: focus can't silently shift scrollLeft */
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  /* Fixed-px fade, not %: at full width 6% was ~78px, so the leading title sat
+     fully opaque past the ramp and read as a word chopped off mid-letter next
+     to the tag. A px ramp fades the same distance at every viewport. */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 110px, #000 calc(100% - 110px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 110px, #000 calc(100% - 110px), transparent 100%);
 }
 .reset-marquee-track {
   display: flex; width: max-content; align-items: center;

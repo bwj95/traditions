@@ -12,6 +12,31 @@ import Emblem from '../components/Emblem.astro';
 import Icon from '../components/Icon.astro';
 ---
 <Base>
+  {/* Full-bleed reel above the nav bar. Each item links to its technique; the
+      second copy exists only for the seamless loop, so it's hidden from AT and
+      the tab order. */}
+  <div class="topbar" slot="topbar">
+    <a href="#five-minute-reset" class="topbar-tag">
+      <Icon name="timer" size={14} /><span>5-min reset</span>
+    </a>
+    <div class="reset-marquee">
+      <div class="reset-marquee-track">
+        {[false, true].map((dup) =>
+          quickResets.map((t) => (
+            <a
+              href={url(`technique/${t.id}`)}
+              class="reset-marquee-item"
+              aria-hidden={dup ? 'true' : undefined}
+              tabindex={dup ? -1 : undefined}
+            >
+              {t.title}<span class="reset-marquee-dot">✦</span>
+            </a>
+          )),
+        )}
+      </div>
+    </div>
+  </div>
+
   <section class="hero">
     <div class="hero-glow" aria-hidden="true"></div>
     <h1>Time-tested ways to feel <em>better</em>.</h1>
@@ -41,31 +66,13 @@ import Icon from '../components/Icon.astro';
     </div>
   </section>
 
-  {/* Marquee banner + collapsed grid; the button reveals all of them. */}
-  <section class="section">
-    <div class="section-head">
-      <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
-      <p class="section-note">Quick practices you can finish in about five minutes.</p>
-    </div>
-
-    <div class="reset-banner">
-      <div class="reset-marquee">
-        <div class="reset-marquee-track">
-          {/* Each item links to its technique; the second copy only exists for
-              the seamless loop, so it's hidden from AT and the tab order. */}
-          {[false, true].map((dup) =>
-            quickResets.map((t) => (
-              <a
-                href={url(`technique/${t.id}`)}
-                class="reset-marquee-item"
-                aria-hidden={dup ? 'true' : undefined}
-                tabindex={dup ? -1 : undefined}
-              >
-                {t.title}<span class="reset-marquee-dot">✦</span>
-              </a>
-            )),
-          )}
-        </div>
+  {/* Collapsed grid; the button reveals all of them. The marquee that used to
+      sit here now runs full-bleed in the topbar, so it isn't duplicated. */}
+  <section class="section" id="five-minute-reset">
+    <div class="section-head reset-head">
+      <div>
+        <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
+        <p class="section-note">Quick practices you can finish in about five minutes.</p>
       </div>
       <button class="reset-expand" id="reset-expand" aria-expanded="false" aria-controls="reset-grid">
         Show all {quickResets.length}
