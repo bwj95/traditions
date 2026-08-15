@@ -4,7 +4,7 @@ import { categories, categoryMeta, categoryCounts } from '../data/content';
 import { url } from '../utils';
 import Icon from '../components/Icon.astro';
 import CategoryIcon from '../components/CategoryIcon.astro';
-import Meadow from '../components/Meadow.astro';
+import LivingBackground from '../components/LivingBackground.astro';
 import Grasshopper from '../components/Grasshopper.astro';
 
 interface Props {
@@ -38,6 +38,16 @@ const {
         covers every weight. The italic loads on demand where it's used. */}
     <link rel="preload" href={url('fonts/sentient-var.woff2')} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={url('fonts/satoshi-var.woff2')} as="font" type="font/woff2" crossorigin />
+    {/* Pre-paint: the background mode carries the whole palette with it, so it
+        has to land on <html> BEFORE first paint. Setting it after hydration
+        would flash the wrong theme on every page load. */}
+    <script is:inline>
+      (() => {
+        let m = 'grass';
+        try { const v = localStorage.getItem('traditions-bg'); if (v === 'water' || v === 'grass') m = v; } catch {}
+        document.documentElement.dataset.bg = m;
+      })();
+    </script>
   </head>
   <body>
     <div class="app">
@@ -58,6 +68,16 @@ const {
             <Icon name="search" size={16} />
             <input type="search" name="q" placeholder="Search practices…" aria-label="Search practices" />
           </form>
+          {/* Two explicit options rather than one flipping button — the pressed
+              state says which medium you're in without having to guess. */}
+          <div class="bg-switch" role="group" aria-label="Background">
+            <button type="button" data-bg-set="grass" aria-pressed="true" title="Grass" aria-label="Grass background">
+              <Icon name="leaf" size={15} />
+            </button>
+            <button type="button" data-bg-set="water" aria-pressed="false" title="Water" aria-label="Water background">
+              <Icon name="waves" size={15} />
+            </button>
+          </div>
           {/* Small screens only — .cat-nav is hidden there, so these links need
               somewhere to live. Bars morph to an X via the aria-expanded state,
               so the CSS reads the same flag assistive tech does. */}
@@ -89,14 +109,23 @@ const {
               <Icon name="search" size={18} class="nav-panel-icon" />
               <span class="nav-panel-label">Search practices</span>
             </a>
-            <a href={url('still')} class="nav-panel-link nav-panel-link--minor">
-              <Icon name="waves" size={18} class="nav-panel-icon" />
-              <span class="nav-panel-label">Still water</span>
-            </a>
             <a href={url('credits')} class="nav-panel-link nav-panel-link--minor">
               <Icon name="info" size={18} class="nav-panel-icon" />
               <span class="nav-panel-label">Image credits</span>
             </a>
+            {/* The header switch is hidden below 560px, so it needs a home here
+                too — otherwise the background can't be changed on a phone. */}
+            <div class="nav-panel-link nav-panel-link--minor nav-panel-bg">
+              <span class="nav-panel-label">Background</span>
+              <div class="bg-switch" role="group" aria-label="Background">
+                <button type="button" data-bg-set="grass" aria-pressed="true" title="Grass" aria-label="Grass background">
+                  <Icon name="leaf" size={15} />
+                </button>
+                <button type="button" data-bg-set="water" aria-pressed="false" title="Water" aria-label="Water background">
+                  <Icon name="waves" size={15} />
+                </button>
+              </div>
+            </div>
           </nav>
         </div>
       </header>
@@ -110,7 +139,6 @@ const {
           <div class="footer-links">
             <a href={url()}>Home</a>
             <a href={url('search')}>Search</a>
-            <a href={url('still')}>Still water</a>
             <a href={url('credits')}>Image credits</a>
           </div>
           <p class="disclaimer">
@@ -125,7 +153,27 @@ const {
       </footer>
     </div>
 
-    <Meadow />
+    <LivingBackground />
+
+    <script is:inline>
+      // Background switch. The buttons only write the attribute + storage;
+      // LivingBackground watches <html data-bg> and follows, and the palette
+      // rides along on the same attribute in CSS. One source of truth.
+      (() => {
+        const root = document.documentElement;
+        const btns = document.querySelectorAll('[data-bg-set]');
+        const sync = () => {
+          const m = root.dataset.bg === 'water' ? 'water' : 'grass';
+          btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.bgSet === m)));
+        };
+        btns.forEach((b) => b.addEventListener('click', () => {
+          root.dataset.bg = b.dataset.bgSet;
+          try { localStorage.setItem('traditions-bg', b.dataset.bgSet); } catch {}
+          sync();
+        }));
+        sync();
+      })();
+    </script>
 
     <script is:inline>
       // Header behaviour: auto-hide on scroll + the small-screen dropdown menu.

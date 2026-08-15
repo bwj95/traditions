@@ -1,0 +1,395 @@
+---
+/*
+ * LivingBackground — the whole viewport is a living medium you can move
+ * through. Two of them, swapped by the header button:
+ *
+ *   grass — a meadow receding to a horizon. Blades sway in an ambient breeze,
+ *           part around the cursor, and SPRING back (they're elastic, so they
+ *           overshoot and settle rather than easing flatly home). A click
+ *           spreads them outward in a gust.
+ *   water — a real 2D wave simulation (the Hugo Elias scheme: each cell becomes
+ *           the average of its four neighbours minus its own previous height).
+ *           The cursor cuts a continuous wake through it; a click drops a stone.
+ *
+ * Both share the same idea as the launcher shader: you don't drag the medium
+ * around, you move THROUGH it, and depth is what sells it. Near blades answer
+ * the cursor hard while far ones barely notice; water carries the disturbance
+ * away as real travelling waves.
+ *
+ * Decorative only — pointer-events:none, aria-hidden, z-index:-1 so anything
+ * with a background paints over it. Under prefers-reduced-motion it renders a
+ * single static frame and never starts a loop.
+ */
+---
+<canvas class="livingbg" id="livingbg" aria-hidden="true"></canvas>
+
+<script is:inline>
+  (() => {
+    const canvas = document.getElementById('livingbg');
+    if (!canvas || !canvas.getContext) return;
+    const ctx = canvas.getContext('2d', { alpha: true });
+    const root = document.documentElement;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ---------------------------------------------------- shared state */
+    let W = 0, H = 0, mode = root.dataset.bg === 'water' ? 'water' : 'grass';
+    let running = false, raf = 0;
+
+    // Pointer is sampled ONCE PER FRAME in the loop, never per event: a
+    // high-rate mouse fires several times per frame, and reacting to each one
+    // makes the wake amplitude depend on the input device rather than on how
+    // fast the hand actually moved.
+    const ptr = { x: -1e5, y: -1e5, px: -1e5, py: -1e5, vx: 0, vy: 0, live: false, seen: false };
+    let evX = -1e5, evY = -1e5, evLive = false;
+    const clicks = []; // impulses waiting to be applied on the next frame
+
+    addEventListener('pointermove', (e) => { evX = e.clientX; evY = e.clientY; evLive = true; }, { passive: true });
+    addEventListener('pointerleave', () => { evLive = false; }, { passive: true });
+    addEventListener('blur', () => { evLive = false; });
+    addEventListener('pointerdown', (e) => { clicks.push({ x: e.clientX, y: e.clientY }); }, { passive: true });
+
+    const css = (n, f) => (getComputedStyle(root).getPropertyValue(n).trim() || f);
+
+    // "#rgb" / "#rrggbb" -> [r,g,b]
+    function hex(c, fallback) {
+      c = (c || '').trim();
+      if (c[0] !== '#') return fallback;
+      if (c.length === 4) c = '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3];
+      const n = parseInt(c.slice(1, 7), 16);
+      return Number.isFinite(n) ? [(n >> 16) & 255, (n >> 8) & 255, n & 255] : fallback;
+    }
+    const mixRGB = (a, b, t) => [
+      a[0] + (b[0] - a[0]) * t,
+      a[1] + (b[1] - a[1]) * t,
+      a[2] + (b[2] - a[2]) * t,
+    ];
+
+    /* ==================================================== GRASS =========
+       A field, not a fringe: every blade carries a depth 0(far)..1(near) that
+       drives where it is rooted, how tall and thick it is, how much haze sits
+       over its colour, and — the part that reads as 3D — how strongly it
+       answers the cursor. */
+    const grass = {
+      blades: [],
+      build() {
+        const near = hex(css('--lbg-c', '#6b7d5a'), [107, 125, 90]);
+        const far = hex(css('--lbg-a', '#aebfa0'), [174, 191, 160]);
+        const n = Math.max(90, Math.min(520, Math.round((W * H) / 3400)));
+        const rand = (a, b) => a + Math.random() * (b - a);
+        this.blades = [];
+        for (let i = 0; i < n; i++) {
+          // bias depth toward the near end so the field thickens downward
+          const d = Math.pow(Math.random(), 0.55);
+          const col = mixRGB(far, near, d);
+          this.blades.push({
+            x: rand(-40, W + 40),
+            // roots run from a soft horizon down past the bottom edge
+            y: H * (0.26 + 0.82 * d) + rand(-12, 12),
+            h: H * (0.05 + 0.20 * d) * rand(0.7, 1.25),
+            w: (0.7 + 2.0 * d) * rand(0.75, 1.25),
+            lean: rand(-0.2, 0.2),
+            flex: rand(0.5, 1) * (0.45 + 0.75 * d),
+            phase: rand(0, Math.PI * 2),
+            depth: d,
+            bend: 0, vel: 0,
+            fill: `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},${(0.20 + 0.55 * d).toFixed(3)})`,
+          });
+        }
+        // paint far blades first so near ones overlap them
+        this.blades.sort((a, b) => a.depth - b.depth);
+      },
+      resize() {
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.build();
+      },
+      frame(t) {
+        ctx.clearRect(0, 0, W, H);
+        ctx.lineCap = 'round';
+
+        // A click is a gust: one impulse to each nearby blade's VELOCITY, not a
+        // held target. The spring below then carries the spread outward and
+        // settles it, so the whole gesture falls out of the physics for free.
+        for (const c of clicks) {
+          for (const b of this.blades) {
+            const dx = b.x - c.x, dy = b.y - c.y;
+            const dist = Math.hypot(dx, dy);
+            const R = 260;
+            if (dist > R) continue;
+            const fall = 1 - dist / R;
+            b.vel += (dx >= 0 ? 1 : -1) * fall * fall * 0.42 * (0.35 + b.depth);
+          }
+        }
+        clicks.length = 0;
+
+        const speed = Math.min(Math.hypot(ptr.vx, ptr.vy), 60);
+        for (const b of this.blades) {
+          const wind = reduce ? 0
+            : (Math.sin(t * 0.0007 + b.x * 0.006 + b.phase) * 0.6 +
+               Math.sin(t * 0.00043 + b.x * 0.013 + b.phase * 1.7) * 0.4) * 0.3 * b.flex;
+
+          // Part around the cursor: shouldered aside radially, plus dragged
+          // along the direction of travel. Reach and force both scale with
+          // depth — the near field bows out of the way while the far field
+          // holds, and that mismatch is the depth cue.
+          let target = 0;
+          if (ptr.live) {
+            const dx = b.x - ptr.x, dy = b.y - ptr.y;
+            const R = 120 + 190 * b.depth;
+            const dist = Math.hypot(dx, dy);
+            if (dist < R) {
+              const fall = 1 - dist / R;
+              const dir = dist > 0.001 ? dx / dist : 0;
+              target = (dir * 0.85 + (ptr.vx / 40) * 0.5) *
+                       fall * fall * (0.55 + 0.9 * b.depth) *
+                       (0.55 + 0.45 * Math.min(speed / 22, 1));
+            }
+          }
+
+          // Damped spring, not a lerp: grass is elastic, so it overshoots and
+          // recoils on the way back instead of gliding flatly to rest.
+          if (reduce) { b.bend = target; }
+          else { b.vel = (b.vel + (target - b.bend) * 0.11) * 0.86; b.bend += b.vel; }
+
+          const sway = b.lean + wind + b.bend;
+          const tipX = b.x + sway * b.h * 0.85;
+          const tipY = b.y - b.h * (1 - Math.min(0.3, Math.abs(sway) * 0.2));
+          ctx.strokeStyle = b.fill;
+          ctx.lineWidth = b.w;
+          ctx.beginPath();
+          ctx.moveTo(b.x, b.y + 2);
+          ctx.quadraticCurveTo(b.x + sway * b.h * 0.22, b.y - b.h * 0.55, tipX, tipY);
+          ctx.stroke();
+        }
+      },
+    };
+
+    /* ==================================================== WATER =========
+       Real wave propagation on a coarse grid, then the surface REFRACTS the
+       artwork underneath it: the local height gradient decides which source
+       pixel each output pixel samples, so the picture genuinely bends. The
+       backing store is one cell per SCALE css px and the browser upscales it —
+       the softness reads as depth and DPR stops mattering. */
+    // SCALE is css px per simulation cell. The pool is idle unless something
+    // touches it, so a finer grid than a constantly-running sim could afford:
+    // 3 keeps the ripples smooth instead of blocky.
+    const SCALE = 3, STEPS = 2, DAMP = 0.982, REFRACT = 26, SPEC = 16;
+    const water = {
+      w: 0, h: 0, cur: null, prev: null, damp: null, src: null, out: null,
+      sim: null, simCtx: null,
+      // The pool is STILL until something touches it. `active` is the time the
+      // surface is still worth simulating; every disturbance pushes it out.
+      // Once the waves have died the canvas simply keeps its last frame, so a
+      // calm background costs nothing per frame.
+      active: 0,
+      resize() {
+        this.w = Math.max(8, Math.ceil(W / SCALE));
+        this.h = Math.max(8, Math.ceil(H / SCALE));
+        const n = this.w * this.h;
+        this.cur = new Float32Array(n);
+        this.prev = new Float32Array(n);
+
+        // The simulation is written into its OWN small canvas, then drawn up to
+        // the full-size one with real filtering. Sizing the visible canvas to
+        // the grid and letting CSS stretch it is what made the surface look
+        // pixelated — that path gives no control over the resampling.
+        if (!this.sim) this.sim = document.createElement('canvas');
+        this.sim.width = this.w; this.sim.height = this.h;
+        this.simCtx = this.sim.getContext('2d');
+        this.out = this.simCtx.createImageData(this.w, this.h);
+
+        const dpr = Math.min(1.5, devicePixelRatio || 1);
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+
+        // Absorbing rim. Pinning the edge cells at zero makes a hard wall and
+        // the whole pool rings like a tray, so damping instead RAMPS toward the
+        // edge — quadratically, because a sharp ramp is itself a discontinuity
+        // and reflects off its own boundary.
+        this.damp = new Float32Array(n);
+        const band = Math.max(4, Math.round(Math.min(this.w, this.h) * 0.10));
+        for (let y = 0; y < this.h; y++) {
+          for (let x = 0; x < this.w; x++) {
+            const e = Math.min(x, y, this.w - 1 - x, this.h - 1 - y);
+            const k = e >= band ? 0 : (1 - e / band);
+            this.damp[y * this.w + x] = DAMP - (DAMP - 0.86) * k * k;
+          }
+        }
+        this.buildSource();
+        // A fresh (or resized) pool still has to be painted once, or the
+        // idle check below would skip straight past an empty canvas.
+        this.active = performance.now() + 400;
+      },
+      // The artwork the surface bends. Refraction can only reveal detail that
+      // actually exists down here — bending a flat wash produces something
+      // indistinguishable from a flat wash — so this deliberately carries
+      // structure: a depth gradient, drifting currents and soft light pools.
+      buildSource() {
+        const a = hex(css('--lbg-a', '#2f6f8f'), [47, 111, 143]);
+        const b = hex(css('--lbg-b', '#46a3a8'), [70, 163, 168]);
+        const c = hex(css('--lbg-c', '#7fc9b6'), [127, 201, 182]);
+        const sc = document.createElement('canvas');
+        sc.width = this.w; sc.height = this.h;
+        const s = sc.getContext('2d');
+        const g = s.createLinearGradient(0, 0, 0, this.h);
+        g.addColorStop(0, `rgb(${a[0]},${a[1]},${a[2]})`);
+        g.addColorStop(0.55, `rgb(${b[0]},${b[1]},${b[2]})`);
+        g.addColorStop(1, `rgb(${c[0]},${c[1]},${c[2]})`);
+        s.fillStyle = g; s.fillRect(0, 0, this.w, this.h);
+
+        // slow currents — wide, soft, low contrast, but enough for the
+        // refraction to have something to grab
+        s.globalAlpha = 0.5;
+        for (let i = 0; i < 14; i++) {
+          const cx = (i * 97.13) % this.w, cy = (i * 53.7) % this.h;
+          const r = this.h * (0.18 + ((i * 7) % 5) * 0.07);
+          const rg = s.createRadialGradient(cx, cy, 0, cx, cy, r);
+          const t = (i % 3) / 2;
+          const col = mixRGB(b, i % 2 ? c : a, t);
+          rg.addColorStop(0, `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},0.55)`);
+          rg.addColorStop(1, 'rgba(0,0,0,0)');
+          s.fillStyle = rg; s.beginPath(); s.arc(cx, cy, r, 0, 6.2832); s.fill();
+        }
+        s.globalAlpha = 1;
+        this.src = s.getImageData(0, 0, this.w, this.h).data;
+      },
+      disturb(cx, cy, radius, amp) {
+        this.active = performance.now() + 5000; // keep simulating until it settles
+        const x0 = Math.max(1, Math.round(cx - radius)), x1 = Math.min(this.w - 2, Math.round(cx + radius));
+        const y0 = Math.max(1, Math.round(cy - radius)), y1 = Math.min(this.h - 2, Math.round(cy + radius));
+        const r2 = radius * radius;
+        for (let y = y0; y <= y1; y++) {
+          for (let x = x0; x <= x1; x++) {
+            const dx = x - cx, dy = y - cy, d2 = dx * dx + dy * dy;
+            if (d2 > r2) continue;
+            this.cur[y * this.w + x] += amp * (1 - d2 / r2);
+          }
+        }
+      },
+      step() {
+        const { w, h, cur, prev, damp } = this;
+        for (let y = 1; y < h - 1; y++) {
+          let i = y * w + 1;
+          for (let x = 1; x < w - 1; x++, i++) {
+            prev[i] = ((cur[i - 1] + cur[i + 1] + cur[i - w] + cur[i + w]) * 0.5 - prev[i]) * damp[i];
+          }
+        }
+        this.cur = prev; this.prev = cur; // swap
+      },
+      frame() {
+        // Cursor cuts a continuous wake. Amplitude scales with speed (a resting
+        // hand is silent) and the total is DIVIDED across the segment actually
+        // travelled, so a fast flick cuts a longer, fainter furrow instead of a
+        // harder one — and it never degenerates into a row of struck rings.
+        if (ptr.live && ptr.seen && !reduce) {
+          const ax = ptr.px / SCALE, ay = ptr.py / SCALE;
+          const bx = ptr.x / SCALE, by = ptr.y / SCALE;
+          const dist = Math.hypot(bx - ax, by - ay);
+          if (dist > 0.4) {
+            const n = Math.min(24, Math.ceil(dist));
+            const amp = -Math.min(dist * 0.30, 3.4) / n;
+            for (let k = 1; k <= n; k++) {
+              const u = k / n;
+              this.disturb(ax + (bx - ax) * u, ay + (by - ay) * u, 3.2, amp);
+            }
+          }
+        }
+        for (const c of clicks) this.disturb(c.x / SCALE, c.y / SCALE, 4.5, -26);
+        clicks.length = 0;
+
+        // Nothing has touched the surface and the last waves have died — leave
+        // the previous frame on the canvas rather than repainting an identical
+        // still pool every 16ms.
+        if (performance.now() > this.active) return;
+
+        if (!reduce) for (let s = 0; s < STEPS; s++) this.step();
+
+        const { w, h, cur, src, out } = this;
+        const px = out.data;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const i = y * w + x;
+            let gx = 0, gy = 0;
+            if (x > 0 && x < w - 1 && y > 0 && y < h - 1) {
+              gx = cur[i - 1] - cur[i + 1];
+              gy = cur[i - w] - cur[i + w];
+            }
+            // ROUND, never truncate: `|0` rounds toward zero, so positive and
+            // negative offsets quantise opposite ways and wave crests tear into
+            // little horizontal steps.
+            //
+            // CLAMP the sample, never wrap it. An earlier version scrolled the
+            // source and wrapped with `% w`, which put a hard vertical seam
+            // straight down the pool wherever the wrap landed. Clamping is
+            // invisible because the rim is damped to stillness anyway.
+            let sx = Math.round(x + gx * REFRACT);
+            let sy = Math.round(y + gy * REFRACT);
+            sx = sx < 0 ? 0 : sx > w - 1 ? w - 1 : sx;
+            sy = sy < 0 ? 0 : sy > h - 1 ? h - 1 : sy;
+            const j = (sy * w + sx) * 4, o = i * 4;
+            const spec = gx * SPEC;
+            px[o] = src[j] + spec;
+            px[o + 1] = src[j + 1] + spec;
+            px[o + 2] = src[j + 2] + spec;
+            px[o + 3] = 255;
+          }
+        }
+        this.simCtx.putImageData(out, 0, 0);
+        // Upscale with the browser's filtering rather than nearest-neighbour
+        // stretching of a small backing store — this is what keeps the ripples
+        // smooth instead of blocky.
+        ctx.drawImage(this.sim, 0, 0, canvas.width, canvas.height);
+      },
+    };
+
+    /* ------------------------------------------------------- driver */
+    function resize() {
+      W = innerWidth; H = innerHeight;
+      (mode === 'water' ? water : grass).resize();
+      if (reduce) frame(0);
+    }
+
+    function frame(t) {
+      // one pointer sample per frame — see the note on ptr above
+      ptr.px = ptr.x; ptr.py = ptr.y;
+      ptr.seen = ptr.live;
+      ptr.live = evLive;
+      ptr.x = evX; ptr.y = evY;
+      if (!ptr.seen) { ptr.px = ptr.x; ptr.py = ptr.y; }
+      ptr.vx = ptr.x - ptr.px; ptr.vy = ptr.y - ptr.py;
+      (mode === 'water' ? water : grass).frame(t);
+    }
+
+    const loop = (t) => { frame(t); raf = requestAnimationFrame(loop); };
+    const play = () => { if (!running && !reduce) { running = true; raf = requestAnimationFrame(loop); } };
+    const stop = () => { running = false; cancelAnimationFrame(raf); };
+
+    function setMode(next) {
+      if (next !== 'grass' && next !== 'water') return;
+      mode = next;
+      canvas.classList.remove('is-in');
+      resize();
+      requestAnimationFrame(() => canvas.classList.add('is-in'));
+    }
+
+    addEventListener('resize', resize, { passive: true });
+    // The palette (and therefore the medium's colours) changes with the OS
+    // theme, so both renderers have to be rebuilt from the new tokens.
+    matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => resize());
+    document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
+    // Base.astro's toggle flips the attribute; the canvas just follows it.
+    new MutationObserver(() => {
+      const next = root.dataset.bg === 'water' ? 'water' : 'grass';
+      if (next !== mode) setMode(next);
+    }).observe(root, { attributes: true, attributeFilter: ['data-bg'] });
+
+    resize();
+    canvas.classList.add('is-in');
+    play();
+  })();
+</script>

@@ -9,7 +9,6 @@ import { url } from '../utils';
 import { Image } from 'astro:assets';
 import Emblem from '../components/Emblem.astro';
 import Icon from '../components/Icon.astro';
-import StillWater from '../components/StillWater.astro';
 import ShaderHero from '../components/ShaderHero.astro';
 import Grasshopper from '../components/Grasshopper.astro';
 import TraditionSelector from '../components/TraditionSelector.astro';
@@ -130,12 +129,8 @@ import TechniqueCard from '../components/TechniqueCard.astro';
         );
       })}
     </ul>
-
-    <!-- Hover preview overlay -->
-    <div class="workprev" id="workprev" aria-hidden="true"></div>
   </section>
 
-  <StillWater />
 </Base>
 
 <style is:global>
@@ -252,7 +247,6 @@ import TechniqueCard from '../components/TechniqueCard.astro';
       items.forEach((i) => setOpen(i, false));
       if (!opening) return;
       setOpen(item, true);
-      document.getElementById('workprev')?.classList.remove('show');
       requestAnimationFrame(() => {
         const top = item.getBoundingClientRect().top;
         if (top < 70) {
@@ -266,28 +260,3 @@ import TechniqueCard from '../components/TechniqueCard.astro';
   })();
 </script>
 
-<script is:inline>
-  // Hover preview cursor follower (Pointer-fine only)
-  (() => {
-    const prev = document.getElementById('workprev');
-    if (!prev || !matchMedia('(pointer: fine)').matches) return;
-    document.querySelectorAll('.trad-row').forEach((row) => {
-      const img = row.querySelector('.trad-row-thumb img');
-      if (!img) return;
-      const open = () => row.closest('.trad-item')?.classList.contains('is-open');
-      row.addEventListener('pointerenter', () => {
-        if (open()) return;
-        const clone = img.cloneNode(true);
-        clone.loading = 'eager';
-        prev.replaceChildren(clone);
-        prev.classList.add('show');
-      });
-      row.addEventListener('pointermove', (e) => {
-        if (open()) return;
-        prev.style.left = e.clientX + 'px';
-        prev.style.top = e.clientY + 'px';
-      });
-      row.addEventListener('pointerleave', () => prev.classList.remove('show'));
-    });
-  })();
-</script>
