@@ -47,45 +47,53 @@ import { url } from '../utils';
 interface Props {
   /** Fill the viewport on its own page instead of sitting in a card. */
   full?: boolean;
+  /** Render only as a background canvas with no UI or frame styles. */
+  bg?: boolean;
 }
-const { full = false } = Astro.props;
+const { full = false, bg = false } = Astro.props;
 ---
 
-<section class:list={['water-section', full ? 'water-section--full' : 'section']} id="still-water">
-  {!full && (
-    <div class="section-head">
-      <h2 class="section-title">Still water</h2>
-      <p class="section-note">
-        A place to do nothing in particular. Touch the surface and watch it settle —
-        the oldest instruction in half these traditions. The rain keeps a slow
-        four-in, six-out rhythm; breathe along with it if you like.
-      </p>
-    </div>
-  )}
-
-  <div class:list={['water-frame', full && 'water-frame--full']} id="water-frame">
+{bg ? (
+  <div class="water-frame water-frame--bg" id="water-frame">
     <canvas class="water-canvas" id="water-canvas" aria-hidden="true"></canvas>
-
-    {full && (
-      <div class="water-overlay" id="water-overlay">
-        <h1>Still water</h1>
-        <p>
-          Nothing to finish here. The rain keeps a slow four-in, six-out rhythm —
-          breathe along with it, or just watch the light move.
+  </div>
+) : (
+  <section class:list={['water-section', full ? 'water-section--full' : 'section']} id="still-water">
+    {!full && (
+      <div class="section-head">
+        <h2 class="section-title">Still water</h2>
+        <p class="section-note">
+          A place to do nothing in particular. Touch the surface and watch it settle —
+          the oldest instruction in half these traditions. The rain keeps a slow
+          four-in, six-out rhythm; breathe along with it if you like.
         </p>
       </div>
     )}
 
-    <p class="water-hint" id="water-hint" aria-hidden="true">touch the water</p>
-  </div>
+    <div class:list={['water-frame', full && 'water-frame--full']} id="water-frame">
+      <canvas class="water-canvas" id="water-canvas" aria-hidden="true"></canvas>
 
-  <div class:list={['water-foot', full && 'water-foot--full']}>
-    <button type="button" class="water-btn" id="water-drop">Drop a stone</button>
-    {full
-      ? <a href={url()} class="water-link"><Icon name="arrow-left" size={15} /> Back to the guide</a>
-      : <a href={url('still')} class="water-link">Open it full screen <Icon name="arrow-right" size={15} /></a>}
-  </div>
-</section>
+      {full && (
+        <div class="water-overlay" id="water-overlay">
+          <h1>Still water</h1>
+          <p>
+            Nothing to finish here. The rain keeps a slow four-in, six-out rhythm —
+            breathe along with it, or just watch the light move.
+          </p>
+        </div>
+      )}
+
+      <p class="water-hint" id="water-hint" aria-hidden="true">touch the water</p>
+    </div>
+
+    <div class:list={['water-foot', full && 'water-foot--full']}>
+      <button type="button" class="water-btn" id="water-drop">Drop a stone</button>
+      {full
+        ? <a href={url()} class="water-link"><Icon name="arrow-left" size={15} /> Back to the guide</a>
+        : <a href={url('still')} class="water-link">Open it full screen <Icon name="arrow-right" size={15} /></a>}
+    </div>
+  </section>
+)}
 
 <script is:inline>
   (() => {
