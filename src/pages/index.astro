@@ -42,10 +42,6 @@ import TechniqueCard from '../components/TechniqueCard.astro';
 
   <!-- ============ HERO LAUNCH BAND (Shader backdrop) ============ -->
   <section class="launch" id="explore">
-    <ShaderHero />
-    <div class="launch__aura" aria-hidden="true"></div>
-    <div class="launch__grain" aria-hidden="true"></div>
-
     <div class="launch__inner wrap">
       <div class="launch__mark">
         <Grasshopper class="launch__gh" />
@@ -68,10 +64,9 @@ import TechniqueCard from '../components/TechniqueCard.astro';
 
   <!-- ============ 5-MINUTE RESET GRID ============ -->
   <section class="section wrap" id="five-minute-reset" data-reveal style="margin-top: clamp(3rem, 7vw, 5rem);">
-    <div class="section-head reset-head">
+    <div class="section-head reset-head" style="margin-bottom: clamp(1.4rem, 3vw, 2rem); align-items: baseline;">
       <div>
-        <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
-        <p class="section-note">Quick practices you can finish in about five minutes.</p>
+        <p class="eyebrow bookmarks__label" style="margin-bottom: 0;"><Icon name="timer" size={13} style="vertical-align: -1px; margin-right: 4px;" /> 5-Minute Reset — quick practices</p>
       </div>
       <button class="reset-expand" id="reset-expand" aria-expanded="false" aria-controls="reset-grid">
         Show all {quickResets.length}
@@ -167,25 +162,12 @@ import TechniqueCard from '../components/TechniqueCard.astro';
     align-items: center;
     padding-block: clamp(3rem, 8vh, 4.8rem);
     border-bottom: 1px solid var(--border);
-    background: #0f0e0a; /* dark base matching traditions dark mode */
     overflow: hidden;
   }
   .launch__inner { 
     position: relative; 
     z-index: 2; 
     width: 100%; 
-  }
-
-  .launch__aura {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background:
-      linear-gradient(100deg, rgba(22, 21, 15, 0.95) 0%, rgba(22, 21, 15, 0.6) 38%, transparent 72%),
-      radial-gradient(50vw 44vw at 6% 52%, rgba(22, 21, 15, 0.65), transparent 70%);
-  }
-  .launch__grain {
-    position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.14;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
-    mix-blend-mode: overlay;
   }
 
   .launch__mark {
