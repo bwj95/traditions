@@ -40,22 +40,6 @@ import TechniqueCard from '../components/TechniqueCard.astro';
     </div>
   </div>
 
-  <!-- ============ HERO LAUNCH BAND (Shader backdrop) ============ -->
-  <section class="launch" id="explore">
-    <div class="launch__inner wrap">
-      <div class="launch__mark">
-        <Grasshopper class="launch__gh" />
-        <span class="pill">
-          <span class="pill__dot" aria-hidden="true"></span>
-          {traditions.length} traditions · {techniques.length} practices · all free
-        </span>
-      </div>
-
-      <p class="eyebrow launch__label">Explore wellness</p>
-      <TraditionSelector />
-    </div>
-  </section>
-
   <!-- ============ PRACTICES (3-Column Bookmarks Grid) ============ -->
   <section class="section wrap bookmarks" id="practices" data-reveal>
     <p class="eyebrow bookmarks__label">Practices — ancient techniques, catalogued</p>
@@ -156,48 +140,7 @@ import TechniqueCard from '../components/TechniqueCard.astro';
 
 <style is:global>
   /* Local styling overrides to build the web-studio dashboard visual environment */
-  .launch {
-    position: relative;
-    display: flex; 
-    align-items: center;
-    padding-block: clamp(1rem, 3.5vh, 2.2rem);
-    border-bottom: 1px solid var(--border);
-    overflow: hidden;
-  }
-  .launch__inner { 
-    position: relative; 
-    z-index: 2; 
-    width: 100%; 
-  }
 
-  .launch__mark {
-    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-    margin-bottom: clamp(0.9rem, 2.5vw, 1.4rem);
-  }
-  .launch__gh { --gh-size: clamp(38px, 6vw, 48px); color: var(--accent); }
-
-  .launch__label { margin-bottom: 0.85rem; }
-
-  /* Pill Status chip style */
-  .pill {
-    display: inline-flex; align-items: center; gap: 0.55rem;
-    padding: 0.4rem 0.9rem 0.4rem 0.75rem;
-    border: 1px solid var(--border); border-radius: 100px;
-    background: rgba(255,255,255,0.035);
-    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
-    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.24em;
-    text-transform: uppercase; color: var(--text-soft);
-  }
-  .pill__dot {
-    width: 7px; height: 7px; border-radius: 50%;
-    background: var(--accent); box-shadow: 0 0 0 0 rgba(157, 179, 134, 0.6);
-    animation: pill-pulse 2.6s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
-  }
-  @keyframes pill-pulse {
-    0% { box-shadow: 0 0 0 0 rgba(157, 179, 134, 0.55); }
-    70%, 100% { box-shadow: 0 0 0 7px rgba(157, 179, 134, 0); }
-  }
-  @media (prefers-reduced-motion: reduce) { .pill__dot { animation: none; } }
 
   /* Section definitions */
   .bookmarks { padding-block: clamp(1.4rem, 3.5vw, 2.4rem); }
