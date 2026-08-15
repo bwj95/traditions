@@ -63,7 +63,7 @@ import TechniqueCard from '../components/TechniqueCard.astro';
   </section>
 
   <!-- ============ 5-MINUTE RESET GRID ============ -->
-  <section class="section wrap" id="five-minute-reset" data-reveal style="margin-top: clamp(3rem, 7vw, 5rem);">
+  <section class="section wrap" id="five-minute-reset" data-reveal style="margin-top: clamp(1.4rem, 3.5vw, 2.4rem);">
     <div class="section-head reset-head" style="margin-bottom: clamp(1.4rem, 3vw, 2rem); align-items: baseline;">
       <div>
         <p class="eyebrow bookmarks__label" style="margin-bottom: 0;"><Icon name="timer" size={13} style="vertical-align: -1px; margin-right: 4px;" /> 5-Minute Reset — quick practices</p>
@@ -95,7 +95,7 @@ import TechniqueCard from '../components/TechniqueCard.astro';
   </section>
 
   <!-- ============ TRADITIONS (Row-by-Row index with hover previews) ============ -->
-  <section class="section wrap traditions" id="traditions" data-reveal style="--reveal-delay: 80ms">
+  <section class="section wrap traditions" id="traditions" data-reveal style="margin-top: clamp(1.4rem, 3.5vw, 2.4rem); --reveal-delay: 80ms">
     <p class="eyebrow bookmarks__label">Traditions — origins & heritage</p>
     <ul class="trad-index" id="trad-index">
       {traditions.map((tr) => {
@@ -160,7 +160,7 @@ import TechniqueCard from '../components/TechniqueCard.astro';
     position: relative;
     display: flex; 
     align-items: center;
-    padding-block: clamp(3rem, 8vh, 4.8rem);
+    padding-block: clamp(1rem, 3.5vh, 2.2rem);
     border-bottom: 1px solid var(--border);
     overflow: hidden;
   }
@@ -172,7 +172,7 @@ import TechniqueCard from '../components/TechniqueCard.astro';
 
   .launch__mark {
     display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-    margin-bottom: clamp(1.6rem, 4vw, 2.6rem);
+    margin-bottom: clamp(0.9rem, 2.5vw, 1.4rem);
   }
   .launch__gh { --gh-size: clamp(38px, 6vw, 48px); color: var(--accent); }
 
@@ -200,9 +200,9 @@ import TechniqueCard from '../components/TechniqueCard.astro';
   @media (prefers-reduced-motion: reduce) { .pill__dot { animation: none; } }
 
   /* Section definitions */
-  .bookmarks { padding-block: clamp(2.8rem, 6vw, 4.5rem); }
+  .bookmarks { padding-block: clamp(1.4rem, 3.5vw, 2.4rem); }
   .bookmarks__label { 
-    margin-bottom: clamp(1.4rem, 3vw, 2rem); 
+    margin-bottom: clamp(0.9rem, 2.5vw, 1.4rem); 
     font-family: var(--font-mono); 
     font-size: 0.62rem; 
     letter-spacing: 0.28em; 
