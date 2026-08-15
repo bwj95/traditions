@@ -5,6 +5,7 @@ import { url } from '../utils';
 import Icon from '../components/Icon.astro';
 import CategoryIcon from '../components/CategoryIcon.astro';
 import Meadow from '../components/Meadow.astro';
+import Grasshopper from '../components/Grasshopper.astro';
 
 interface Props {
   title?: string;
@@ -46,15 +47,12 @@ const {
       <header class="site-header">
         <div class="wrap header-inner">
           <a href={url()} class="brand">
-            <Icon name="leaf" size={20} class="brand-mark" />
+            <Grasshopper class="brand-mark-gh" />
             <span>Traditions</span>
           </a>
-          <nav class="cat-nav" aria-label="Categories">
-            {categories.map((c) => (
-              <a href={url(c)} class="cat-link" aria-current={activeCategory === c ? 'page' : undefined}>
-                {categoryMeta[c].label}
-              </a>
-            ))}
+          <nav class="cat-nav" aria-label="Sections">
+            <a href={url('#practices')} class="cat-link">Practices</a>
+            <a href={url('#traditions')} class="cat-link">Traditions</a>
           </nav>
           <form class="search-mini" action={url('search')} method="get" role="search">
             <Icon name="search" size={16} />
@@ -77,18 +75,14 @@ const {
 
         <div class="nav-panel" id="nav-panel">
           <nav class="wrap nav-panel-inner" aria-label="Sections">
-            {categories.map((c) => (
-              <a
-                href={url(c)}
-                class="nav-panel-link"
-                aria-current={activeCategory === c ? 'page' : undefined}
-                style={`--badge-hue:${categoryMeta[c].hue}`}
-              >
-                <CategoryIcon category={c} size={20} class="nav-panel-icon" />
-                <span class="nav-panel-label">{categoryMeta[c].label}</span>
-                <span class="nav-panel-count">{categoryCounts[c]}</span>
-              </a>
-            ))}
+            <a href={url('#practices')} class="nav-panel-link">
+              <Icon name="leaf" size={20} class="nav-panel-icon" />
+              <span class="nav-panel-label">Practices</span>
+            </a>
+            <a href={url('#traditions')} class="nav-panel-link">
+              <Icon name="map-pin" size={20} class="nav-panel-icon" />
+              <span class="nav-panel-label">Traditions</span>
+            </a>
             {/* The header search collapses below 560px — this replaces it with
                 the full search page rather than duplicating the form. */}
             <a href={url('search')} class="nav-panel-link nav-panel-link--minor">

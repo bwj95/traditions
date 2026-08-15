@@ -1,238 +1,306 @@
 ---
-import { Image } from 'astro:assets';
 import Base from '../layouts/Base.astro';
 import {
-  categories, categoryMeta, categoryCounts, traditions, quickResets, techniques,
-  techniquesByCategory,
+  categories, categoryMeta, traditions, techniques,
+  techniquesByTradition,
 } from '../data/content';
 import { traditionTile } from '../data/images';
 import { url } from '../utils';
-import TechniqueCard from '../components/TechniqueCard.astro';
-import CategoryIcon from '../components/CategoryIcon.astro';
+import { Image } from 'astro:assets';
 import Emblem from '../components/Emblem.astro';
 import Icon from '../components/Icon.astro';
 import StillWater from '../components/StillWater.astro';
+import ShaderHero from '../components/ShaderHero.astro';
+import Grasshopper from '../components/Grasshopper.astro';
+import TraditionSelector from '../components/TraditionSelector.astro';
+import TraditionBookmarks from '../components/TraditionBookmarks.astro';
 ---
-<Base>
-  {/* Full-bleed reel above the nav bar. Each item links to its technique; the
-      second copy exists only for the seamless loop, so it's hidden from AT and
-      the tab order. */}
-  <div class="topbar" slot="topbar">
-    <a href="#five-minute-reset" class="topbar-tag">
-      <Icon name="timer" size={14} /><span>5-min reset</span>
-    </a>
-    <div class="reset-marquee">
-      <div class="reset-marquee-track">
-        {[false, true].map((dup) =>
-          quickResets.map((t) => (
-            <a
-              href={url(`technique/${t.id}`)}
-              class="reset-marquee-item"
-              aria-hidden={dup ? 'true' : undefined}
-              tabindex={dup ? -1 : undefined}
-            >
-              {t.title}<span class="reset-marquee-dot">✦</span>
-            </a>
-          )),
-        )}
+<Base title="Traditions — ancient practices, catalogued">
+  <!-- ============ HERO LAUNCH BAND (Shader backdrop) ============ -->
+  <section class="launch" id="explore">
+    <ShaderHero />
+    <div class="launch__aura" aria-hidden="true"></div>
+    <div class="launch__grain" aria-hidden="true"></div>
+
+    <div class="launch__inner wrap">
+      <div class="launch__mark">
+        <Grasshopper class="launch__gh" />
+        <span class="pill">
+          <span class="pill__dot" aria-hidden="true"></span>
+          {traditions.length} traditions · {techniques.length} practices · all free
+        </span>
       </div>
-    </div>
-  </div>
 
-  <section class="hero">
-    <div class="hero-glow" aria-hidden="true"></div>
-    <h1>Time-tested ways to feel <em>better</em>.</h1>
-    <p class="hero-sub">
-      {techniques.length} practices drawn from {traditions.length} of the world's
-      wellness traditions — for the mind, the body, the breath, and the table.
-      Browse by what you need, or by where it comes from.
-    </p>
+      <p class="eyebrow launch__label">Explore wellness</p>
+      <TraditionSelector />
+    </div>
   </section>
 
-  {/* Category tiles pin & stack as you scroll (workbench Stack layout), and
-      each one opens to reveal its practices without leaving the page.
-      The tile is a <div>, not an <a>: a toggle button can't legally live
-      inside a link, so the label and "Explore" carry the navigation. */}
-  <section class="section">
-    <h2 class="section-title">Browse by category</h2>
-    <div class="cat-grid cat-grid--stack" id="cat-stack">
-      {categories.map((c) => {
-        const meta = categoryMeta[c];
-        const items = techniquesByCategory(c);
-        return (
-          <div class="cat-tile" style={`--badge-hue:${meta.hue}`}>
-            <CategoryIcon category={c} size={26} class="cat-tile-icon" />
-            <span class="cat-tile-count">{categoryCounts[c]}</span>
-            <h3><a href={url(c)} class="cat-tile-head">{meta.label}</a></h3>
-            <p>{meta.blurb}</p>
-            <div class="cat-tile-actions">
-              <button
-                type="button"
-                class="cat-tile-toggle"
-                aria-expanded="false"
-                aria-controls={`cat-panel-${c}`}
-              >
-                <span data-open="Hide practices">Show {items.length} practices</span>
-                <Icon name="chevron-down" size={16} class="cat-tile-chev" />
-              </button>
-              <a href={url(c)} class="cat-tile-go">Explore <Icon name="arrow-right" size={16} /></a>
-            </div>
-            <div class="cat-tile-panel" id={`cat-panel-${c}`}>
-              <div class="cat-tile-panel-inner">
-                <div class="card-grid card-grid--tight">
-                  {items.map((t) => <TechniqueCard technique={t} />)}
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-
-    <script is:inline>
-      // Accordion: one category open at a time. 48 cards across four tiles is a
-      // very long page otherwise, and the sticky stack has nowhere to put them.
-      (() => {
-        const stack = document.getElementById('cat-stack');
-        if (!stack) return;
-        const tiles = [...stack.querySelectorAll('.cat-tile')];
-        const setOpen = (tile, open) => {
-          const btn = tile.querySelector('.cat-tile-toggle');
-          tile.classList.toggle('is-open', open);
-          btn?.setAttribute('aria-expanded', String(open));
-        };
-        stack.addEventListener('click', (e) => {
-          const btn = e.target.closest('.cat-tile-toggle');
-          if (!btn) return;
-          const tile = btn.closest('.cat-tile');
-          const opening = btn.getAttribute('aria-expanded') !== 'true';
-          tiles.forEach((t) => setOpen(t, false));
-          if (opening) setOpen(tile, true);
-          // Sticky tiles can't hold a 20-card list — one taller than the
-          // viewport pins and the tiles below slide over its contents. While
-          // anything is open the whole stack drops to normal flow.
-          stack.classList.toggle('has-open', opening);
-          if (!opening) return;
-          // Keep the tile you just opened under the thumb instead of letting
-          // the reflow shove it off screen.
-          requestAnimationFrame(() => {
-            const top = tile.getBoundingClientRect().top;
-            if (top < 70 || top > window.innerHeight * 0.5) {
-              window.scrollTo({
-                top: window.scrollY + top - 96,
-                behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
-              });
-            }
-          });
-        });
-      })();
-    </script>
+  <!-- ============ PRACTICES (3-Column Bookmarks Grid) ============ -->
+  <section class="section wrap bookmarks" id="practices" data-reveal>
+    <p class="eyebrow bookmarks__label">Practices — ancient techniques, catalogued</p>
+    <TraditionBookmarks />
   </section>
 
-  {/* Collapsed grid; the button reveals all of them. The marquee that used to
-      sit here now runs full-bleed in the topbar, so it isn't duplicated. */}
-  <section class="section" id="five-minute-reset">
-    <div class="section-head reset-head">
-      <div>
-        <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
-        <p class="section-note">Quick practices you can finish in about five minutes.</p>
-      </div>
-      <button class="reset-expand" id="reset-expand" aria-expanded="false" aria-controls="reset-grid">
-        Show all {quickResets.length}
-      </button>
-    </div>
-
-    <div class="card-grid reset-grid" id="reset-grid">
-      {quickResets.map((t) => <TechniqueCard technique={t} />)}
-    </div>
-
-    <script is:inline>
-      // Collapse immediately (inline, pre-paint). Without JS all cards just show.
-      (() => {
-        const grid = document.getElementById('reset-grid');
-        const btn = document.getElementById('reset-expand');
-        if (!grid || !btn) return;
-        const total = grid.children.length;
-        grid.classList.add('is-collapsed');
-        btn.addEventListener('click', () => {
-          const collapsed = grid.classList.toggle('is-collapsed');
-          btn.setAttribute('aria-expanded', String(!collapsed));
-          btn.textContent = collapsed ? `Show all ${total}` : 'Show fewer';
-        });
-      })();
-    </script>
-  </section>
-
-  {/* Traditions as a numbered editorial index (workbench Index layout);
-      a floating photo preview follows the cursor over each row. */}
-  <section class="section">
-    <h2 class="section-title">Browse by tradition</h2>
-    {/* <ul>, not <ol>: the order is shuffled per visit, so there's no rank to
-        number. No tradition gets to be permanently first. */}
+  <!-- ============ TRADITIONS (Row-by-Row index with hover previews) ============ -->
+  <section class="section wrap traditions" id="traditions" data-reveal style="--reveal-delay: 80ms">
+    <p class="eyebrow bookmarks__label">Traditions — origins & heritage</p>
     <ul class="trad-index" id="trad-index">
       {traditions.map((tr) => {
         const img = traditionTile(tr.id);
+        const items = techniquesByTradition(tr.id);
         return (
-          <li>
-            <a href={url(`tradition/${tr.id}`)} class="trad-row">
-              <Emblem id={tr.id} size={20} class="trad-row-emblem" />
-              <span class="trad-row-name">{tr.name}</span>
+          <li class="trad-item">
+            <div class="trad-row">
+              <a href={url(`tradition/${tr.id}`)} class="trad-row-main">
+                <Emblem id={tr.id} size={20} class="trad-row-emblem" />
+                <span class="trad-row-name">{tr.name}</span>
+                <span class="trad-row-go"><Icon name="arrow-right" size={16} /></span>
+              </a>
               <span class="trad-row-region">{tr.region}</span>
-              <span class="trad-row-go"><Icon name="arrow-right" size={16} /></span>
+              <button
+                type="button"
+                class="trad-row-toggle"
+                aria-expanded="false"
+                aria-controls={`trad-panel-${tr.id}`}
+                aria-label={`${items.length} practices from ${tr.name}`}
+              >
+                <span class="trad-row-toggle-label">
+                  {items.length}<span class="trad-row-toggle-word"> practices</span>
+                </span>
+                <Icon name="chevron-down" size={15} class="trad-row-chev" />
+              </button>
               {img && (
                 <span class="trad-row-thumb" aria-hidden="true">
                   <Image src={img} alt="" widths={[480]} sizes="300px" quality={68} loading="lazy" />
                 </span>
               )}
-            </a>
+            </div>
+            <div class="trad-panel" id={`trad-panel-${tr.id}`}>
+              <div class="trad-panel-inner">
+                <div class="card-grid card-grid--tight">
+                  {items.map((t) => (
+                    <article class="tech-card">
+                      <a href={url(`technique/${t.id}`)} class="tech-card-link">
+                        <h4 class="tech-card-title">{t.title}</h4>
+                        <p class="tech-card-desc">{t.description}</p>
+                      </a>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </div>
           </li>
         );
       })}
     </ul>
 
-    <script is:inline>
-      // Shuffle on every visit. Inline and immediately after the list so it
-      // runs before first paint — a shuffle in DOMContentLoaded would show the
-      // build-time order first and visibly reorder itself.
-      (() => {
-        const list = document.getElementById('trad-index');
-        if (!list) return;
-        const rows = [...list.children];
-        for (let i = rows.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1)); // Fisher-Yates
-          [rows[i], rows[j]] = [rows[j], rows[i]];
-        }
-        list.append(...rows); // append moves existing nodes; no clone, no relisten
-      })();
-    </script>
-
+    <!-- Hover preview overlay -->
     <div class="workprev" id="workprev" aria-hidden="true"></div>
-
-    <script is:inline>
-      // Floating hover preview — clones the row's hidden photo and follows the
-      // cursor. Mouse-only (pointer: fine); touch simply navigates.
-      (() => {
-        const prev = document.getElementById('workprev');
-        if (!prev || !matchMedia('(pointer: fine)').matches) return;
-        document.querySelectorAll('.trad-row').forEach((row) => {
-          const img = row.querySelector('.trad-row-thumb img');
-          if (!img) return;
-          row.addEventListener('pointerenter', () => {
-            const clone = img.cloneNode(true);
-            clone.loading = 'eager'; // source sits in a display:none span
-            prev.replaceChildren(clone);
-            prev.classList.add('show');
-          });
-          row.addEventListener('pointermove', (e) => {
-            prev.style.left = e.clientX + 'px';
-            prev.style.top = e.clientY + 'px';
-          });
-          row.addEventListener('pointerleave', () => prev.classList.remove('show'));
-        });
-      })();
-    </script>
   </section>
 
-  {/* Closing beat: browse, then rest. */}
   <StillWater />
 </Base>
+
+<style is:global>
+  /* Local styling overrides to build the web-studio dashboard visual environment */
+  .launch {
+    position: relative;
+    display: flex; 
+    align-items: center;
+    padding-block: clamp(3rem, 8vh, 4.8rem);
+    border-bottom: 1px solid var(--border);
+    background: #0f0e0a; /* dark base matching traditions dark mode */
+    overflow: hidden;
+  }
+  .launch__inner { 
+    position: relative; 
+    z-index: 2; 
+    width: 100%; 
+  }
+
+  .launch__aura {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background:
+      linear-gradient(100deg, rgba(22, 21, 15, 0.95) 0%, rgba(22, 21, 15, 0.6) 38%, transparent 72%),
+      radial-gradient(50vw 44vw at 6% 52%, rgba(22, 21, 15, 0.65), transparent 70%);
+  }
+  .launch__grain {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none; opacity: 0.14;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+  }
+
+  .launch__mark {
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    margin-bottom: clamp(1.6rem, 4vw, 2.6rem);
+  }
+  .launch__gh { --gh-size: clamp(38px, 6vw, 48px); color: var(--accent); }
+
+  .launch__label { margin-bottom: 0.85rem; }
+
+  /* Pill Status chip style */
+  .pill {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    padding: 0.4rem 0.9rem 0.4rem 0.75rem;
+    border: 1px solid var(--border); border-radius: 100px;
+    background: rgba(255,255,255,0.035);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--text-soft);
+  }
+  .pill__dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 0 0 rgba(157, 179, 134, 0.6);
+    animation: pill-pulse 2.6s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+  }
+  @keyframes pill-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(157, 179, 134, 0.55); }
+    70%, 100% { box-shadow: 0 0 0 7px rgba(157, 179, 134, 0); }
+  }
+  @media (prefers-reduced-motion: reduce) { .pill__dot { animation: none; } }
+
+  /* Section definitions */
+  .bookmarks { padding-block: clamp(2.8rem, 6vw, 4.5rem); }
+  .bookmarks__label { 
+    margin-bottom: clamp(1.4rem, 3vw, 2rem); 
+    font-family: var(--font-mono); 
+    font-size: 0.62rem; 
+    letter-spacing: 0.28em; 
+    text-transform: uppercase; 
+    color: var(--text-faint);
+    text-align: left;
+  }
+
+  /* Shared buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 0.55rem;
+    padding: 0.85rem 1.4rem;
+    border-radius: 100px;
+    font-family: var(--font-mono);
+    font-size: 0.82rem; letter-spacing: 0.06em;
+    border: 1px solid var(--border-strong);
+    color: var(--text);
+    transition: transform 0.25s var(--ease), border-color 0.25s var(--ease), background 0.25s var(--ease);
+    position: relative; overflow: hidden;
+    cursor: pointer;
+  }
+  .btn:hover { transform: translateY(-2px); border-color: transparent; }
+  
+  .btn-primary { border-color: transparent; color: #fff; font-weight: 600; z-index: 1; }
+  .btn-primary::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--spectrum); }
+  .btn-primary:hover { transform: translateY(-2px) scale(1.02); }
+  .btn-ghost:hover { background: var(--bg-sunken); }
+
+  /* Stagger animation for hero loader contents */
+  .launch__inner > * { opacity: 0; animation: launch-in 0.75s var(--ease) forwards; }
+  .launch__inner > *:nth-child(1) { animation-delay: 0ms; }
+  .launch__inner > *:nth-child(2) { animation-delay: 90ms; }
+  .launch__inner > *:nth-child(3) { animation-delay: 170ms; }
+  @keyframes launch-in { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .launch__inner > * { animation: none; opacity: 1; }
+  }
+
+  /* Traditions list inline components */
+  .tech-card {
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .tech-card:hover {
+    border-color: var(--accent);
+    background: var(--bg-sunken);
+  }
+  .tech-card-link {
+    display: block;
+    padding: 1.1rem;
+    text-decoration: none;
+    color: inherit;
+    text-align: left;
+  }
+  .tech-card-title {
+    font-size: 1.05rem;
+    margin-bottom: 0.35rem;
+    font-family: var(--font-sans);
+    font-weight: 600;
+  }
+  .tech-card-desc {
+    font-size: 0.84rem;
+    color: var(--text-soft);
+    line-height: 1.45;
+  }
+</style>
+
+<script is:inline>
+  // Shuffle tradition rows on every visit (inline and pre-paint)
+  (() => {
+    const list = document.getElementById('trad-index');
+    if (!list) return;
+    const rows = [...list.children];
+    for (let i = rows.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rows[i], rows[j]] = [rows[j], rows[i]];
+    }
+    list.append(...rows);
+  })();
+</script>
+
+<script is:inline>
+  // Accordion for traditions list
+  (() => {
+    const list = document.getElementById('trad-index');
+    if (!list) return;
+    const items = [...list.querySelectorAll('.trad-item')];
+    const setOpen = (item, open) => {
+      item.classList.toggle('is-open', open);
+      item.querySelector('.trad-row-toggle')?.setAttribute('aria-expanded', String(open));
+    };
+    list.addEventListener('click', (e) => {
+      const btn = e.target.closest('.trad-row-toggle');
+      if (!btn) return;
+      const item = btn.closest('.trad-item');
+      const opening = btn.getAttribute('aria-expanded') !== 'true';
+      items.forEach((i) => setOpen(i, false));
+      if (!opening) return;
+      setOpen(item, true);
+      document.getElementById('workprev')?.classList.remove('show');
+      requestAnimationFrame(() => {
+        const top = item.getBoundingClientRect().top;
+        if (top < 70) {
+          window.scrollTo({
+            top: window.scrollY + top - 96,
+            behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+          });
+        }
+      });
+    });
+  })();
+</script>
+
+<script is:inline>
+  // Hover preview cursor follower (Pointer-fine only)
+  (() => {
+    const prev = document.getElementById('workprev');
+    if (!prev || !matchMedia('(pointer: fine)').matches) return;
+    document.querySelectorAll('.trad-row').forEach((row) => {
+      const img = row.querySelector('.trad-row-thumb img');
+      if (!img) return;
+      const open = () => row.closest('.trad-item')?.classList.contains('is-open');
+      row.addEventListener('pointerenter', () => {
+        if (open()) return;
+        const clone = img.cloneNode(true);
+        clone.loading = 'eager';
+        prev.replaceChildren(clone);
+        prev.classList.add('show');
+      });
+      row.addEventListener('pointermove', (e) => {
+        if (open()) return;
+        prev.style.left = e.clientX + 'px';
+        prev.style.top = e.clientY + 'px';
+      });
+      row.addEventListener('pointerleave', () => prev.classList.remove('show'));
+    });
+  })();
+</script>

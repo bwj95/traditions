@@ -1,0 +1,185 @@
+---
+import { categories, categoryMeta, traditions } from '../data/content';
+import { url } from '../utils';
+
+// Merge categories and traditions into a single dropdown list
+const items = [
+  ...categories.map((c) => ({
+    name: categoryMeta[c].label,
+    kind: 'Category',
+    blurb: categoryMeta[c].blurb,
+    url: url(c),
+  })),
+  ...traditions.map((t) => ({
+    name: t.name,
+    kind: 'Tradition',
+    blurb: t.blurb,
+    url: url(`tradition/${t.id}`),
+  })),
+];
+
+const first = items[0];
+---
+<div class="sel" data-selector>
+  <div class="sel__bar">
+    <div class="sel__dd">
+      <button
+        type="button"
+        class="sel__trigger glass"
+        id="trad-trigger"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-controls="trad-list"
+      >
+        <span class="sel__name" data-sel-name>{first?.name}</span>
+        <span class="sel__caret" aria-hidden="true"></span>
+      </button>
+
+      <ul class="sel__list glass" id="trad-list" role="listbox" aria-label="Explore wellness">
+        {items.map((p, i) => (
+          <li
+            class="sel__opt"
+            role="option"
+            data-value={i}
+            data-desc={p.blurb}
+            data-url={p.url}
+            aria-selected={i === 0 ? 'true' : 'false'}
+          >
+            <span class="sel__opt-name">{p.name}</span>
+            <span class="sel__opt-kind">{p.kind}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <a
+      class="sel__open btn btn-primary"
+      data-sel-open
+      href={first?.url}
+    >Explore <span aria-hidden="true">▸</span></a>
+  </div>
+
+  <p class="sel__desc" data-sel-desc-text>{first?.blurb}</p>
+</div>
+
+<style>
+  .sel { width: 100%; max-width: 620px; }
+
+  .sel__bar { display: flex; gap: 0.7rem; align-items: stretch; }
+
+  .sel__dd { position: relative; flex: 1 1 auto; min-width: 0; }
+
+  .sel__trigger {
+    width: 100%;
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    font-size: 1rem; color: var(--text); text-align: left;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .sel__trigger:hover { border-color: var(--border-bright); }
+  .sel__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .sel__caret {
+    flex: 0 0 auto; width: 9px; height: 9px;
+    border-right: 2px solid var(--text-dim); border-bottom: 2px solid var(--text-dim);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.25s var(--ease), border-color 0.2s var(--ease);
+  }
+  .sel__trigger[aria-expanded="true"] .sel__caret { transform: rotate(-135deg) translate(-2px, -2px); }
+
+  .sel__list {
+    position: absolute; top: calc(100% + 0.5rem); left: 0; right: 0; z-index: 20;
+    list-style: none; padding: 0.4rem; margin: 0;
+    display: flex; flex-direction: column; gap: 0.1rem;
+    max-height: min(58vh, 420px); overflow-y: auto;
+    opacity: 0; visibility: hidden; transform: translateY(-8px);
+    transition: opacity 0.2s var(--ease), transform 0.2s var(--ease), visibility 0.2s;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    border-radius: var(--radius-sm);
+  }
+  .sel__list.open { opacity: 1; visibility: visible; transform: translateY(0); }
+
+  .sel__opt {
+    display: flex; align-items: baseline; justify-content: space-between; gap: 1rem;
+    padding: 0.62rem 0.9rem; border-radius: max(6px, calc(var(--radius-sm) - 6px));
+    color: var(--text-dim); font-size: 0.95rem; cursor: pointer;
+    transition: color 0.15s, background 0.15s;
+  }
+  .sel__opt:hover { color: var(--text); background: var(--panel-2); }
+  .sel__opt[aria-selected="true"] { color: var(--text); background: var(--panel-2); }
+  .sel__opt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sel__opt-kind {
+    flex: 0 0 auto;
+    font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--text-faint);
+  }
+  .sel__opt[aria-selected="true"] .sel__opt-kind { color: var(--accent); }
+
+  .sel__open {
+    flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0 1.2rem;
+    font-size: 0.9rem; white-space: nowrap;
+    border-radius: var(--radius-sm);
+  }
+
+  .sel__desc {
+    margin-top: 0.9rem;
+    color: var(--text-dim); line-height: 1.6; font-size: 0.95rem;
+    min-height: 2.6em;
+    text-align: left;
+  }
+
+  @media (max-width: 520px) {
+    .sel__desc { min-height: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .sel__caret, .sel__list { transition: none; }
+  }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-selector]').forEach((root) => {
+    const trigger = root.querySelector<HTMLButtonElement>('.sel__trigger')!;
+    const list = root.querySelector<HTMLElement>('.sel__list')!;
+    const nameEl = root.querySelector<HTMLElement>('[data-sel-name]')!;
+    const descText = root.querySelector<HTMLElement>('[data-sel-desc-text]')!;
+    const openBtn = root.querySelector<HTMLAnchorElement>('[data-sel-open]')!;
+    const opts = [...root.querySelectorAll<HTMLElement>('.sel__opt')];
+    let idx = 0;
+
+    const isOpen = () => trigger.getAttribute('aria-expanded') === 'true';
+    const openList = () => { list.classList.add('open'); trigger.setAttribute('aria-expanded', 'true'); };
+    const closeList = () => { list.classList.remove('open'); trigger.setAttribute('aria-expanded', 'false'); };
+
+    const select = (i: number) => {
+      idx = Math.max(0, Math.min(i, opts.length - 1));
+      opts.forEach((o, k) => o.setAttribute('aria-selected', String(k === idx)));
+      nameEl.textContent = opts[idx].querySelector('.sel__opt-name')?.textContent || '';
+      descText.textContent = opts[idx].getAttribute('data-desc') || '';
+      openBtn.href = opts[idx].getAttribute('data-url') || '#';
+      opts[idx].scrollIntoView({ block: 'nearest' });
+    };
+
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isOpen() ? closeList() : openList();
+    });
+
+    opts.forEach((o, i) =>
+      o.addEventListener('click', () => { select(i); closeList(); trigger.focus(); })
+    );
+
+    trigger.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); isOpen() ? select(idx + 1) : openList(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); isOpen() ? select(idx - 1) : openList(); }
+      else if (e.key === 'Escape') closeList();
+    });
+
+    document.addEventListener('click', (e) => {
+      if (isOpen() && !root.contains(e.target as Node)) closeList();
+    });
+  });
+</script>

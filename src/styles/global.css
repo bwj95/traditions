@@ -115,7 +115,21 @@ img { max-width: 100%; display: block; }
 }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
-.main { flex: 1; padding-block: var(--main-pad-top) 80px; }
+.main {
+  flex: 1; padding-block: var(--main-pad-top) 80px;
+  /* .hero-glow deliberately bleeds -25% past the right edge, which on a 390px
+     phone gave the document 52px of horizontal scroll.
+     - clip, NOT hidden: hidden makes this a scroll container and kills
+       position:sticky, which the category stack inside here depends on. clip is
+       also the only overflow value that lets the other axis stay visible, so
+       vertical painting is untouched.
+     - on .main, NOT body/html: overflow on body propagates to the viewport,
+       and viewport-level clip doesn't stop the document overflowing (measured —
+       it stayed at 52px). A normal block actually clips.
+     - fixed descendants (.meadow canvas, .workprev) keep the viewport as their
+       containing block, so they're unaffected. */
+  overflow-x: clip;
+}
 
 /* ---------- Top bar (home only) — full-bleed reset marquee above the nav ----
    Sits in normal flow ABOVE the sticky header, so it scrolls away for good and
@@ -157,6 +171,7 @@ img { max-width: 100%; display: block; }
   color: var(--accent-ink); white-space: nowrap;
 }
 .brand .brand-mark { color: var(--accent); }
+.brand .brand-mark-gh { --gh-size: 26px; color: var(--accent); }
 .cat-nav { display: flex; gap: 4px; margin-left: 8px; }
 .cat-link {
   padding: 6px 13px; border-radius: 999px;
@@ -515,22 +530,79 @@ img { max-width: 100%; display: block; }
   padding: clamp(16px, 2.6vw, 24px) 6px;
   transition: transform 0.3s ease;
 }
-.trad-row:hover { transform: translateX(10px); }
+/* The slide is the *link's* hover, not the row's — the row now also holds the
+   disclosure button, and sliding the whole thing 10px while you're reaching for
+   that button moves the hit target out from under the cursor. An open row
+   doesn't slide at all. Enhancement only: no :has(), no slide, nothing broken. */
+.trad-item:not(.is-open) .trad-row:has(.trad-row-main:hover) { transform: translateX(10px); }
+.trad-row-main {
+  flex: 1 1 auto; min-width: 0;
+  display: flex; align-items: center; gap: clamp(14px, 3vw, 28px);
+}
 .trad-row-emblem { flex: 0 0 auto; color: var(--accent); }
 .trad-row-name {
   font-family: var(--font-display);
   font-size: clamp(1.25rem, 3vw, 1.9rem); line-height: 1.15;
   transition: color 0.2s ease;
 }
-.trad-row:hover .trad-row-name { color: var(--accent); }
+.trad-row-main:hover .trad-row-name,
+.trad-item.is-open .trad-row-name { color: var(--accent); }
+/* Fixed column, not content width: an auto-width region starts at a different x
+   on every row, and since the arrow is pushed up against it the arrows scatter
+   too. 16rem clears the longest region ("West Africa / African Diaspora", 249px
+   measured). Right-aligned so it still hugs the toggle. */
 .trad-row-region {
-  margin-left: auto; flex: 0 0 auto;
+  flex: 0 0 auto; width: 16rem; text-align: right;
   color: var(--text-soft); font-size: 0.86rem;
   text-transform: uppercase; letter-spacing: 0.05em;
 }
-.trad-row-go { flex: 0 0 auto; color: var(--text-faint); transition: color 0.2s, transform 0.2s; }
-.trad-row:hover .trad-row-go { color: var(--accent); transform: translateX(4px); }
+/* margin-left:auto pushes the arrow to the end of the *link*, not the row, so
+   it lines up in a column across rows (inline after the name it landed at a
+   different x on every row) while the whole span stays one click target. */
+.trad-row-go {
+  flex: 0 0 auto; margin-left: auto;
+  color: var(--text-faint); transition: color 0.2s, transform 0.2s;
+}
+.trad-row-main:hover .trad-row-go { color: var(--accent); transform: translateX(4px); }
 .trad-row-thumb { display: none; } /* holds the img the floating preview clones */
+
+/* Disclosure: turns the index row into a deck of cards without leaving it. */
+.trad-row-toggle {
+  flex: 0 0 auto;
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 7px 14px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--border-strong);
+  color: var(--text-soft);
+  font: inherit; font-size: 0.84rem; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.trad-row-toggle:hover { color: var(--accent); border-color: var(--accent); }
+.trad-item.is-open .trad-row-toggle {
+  color: var(--accent); border-color: var(--accent); background: var(--bg-elev);
+}
+.trad-row-chev { transition: transform 0.25s ease; }
+.trad-row-toggle[aria-expanded='true'] .trad-row-chev { transform: rotate(180deg); }
+
+/* Same 0fr -> 1fr disclosure as the category tiles: animates to the content's
+   natural height, and visibility (not just overflow) keeps the collapsed cards
+   out of the tab order. */
+.trad-panel {
+  display: grid; grid-template-rows: 0fr;
+  transition: grid-template-rows 0.38s ease;
+}
+.trad-panel-inner {
+  overflow: hidden; min-height: 0;
+  visibility: hidden;
+  transition: visibility 0s linear 0.38s;
+}
+.trad-item.is-open .trad-panel { grid-template-rows: 1fr; }
+.trad-item.is-open .trad-panel-inner { visibility: visible; transition-delay: 0s; }
+.trad-panel-inner > * { padding: 4px 6px 28px; }
+@media (prefers-reduced-motion: reduce) {
+  .trad-panel { transition: none; }
+  .trad-panel-inner { transition: none; }
+}
 
 /* Floating hover preview (follows the cursor; JS positions it) */
 .workprev {
@@ -956,6 +1028,8 @@ img { max-width: 100%; display: block; }
   .search-mini input { width: 110px; }
   .detail-cols { grid-template-columns: 1fr; gap: 30px; }
   .trad-banner { min-height: 240px; }
+  /* No room for a 16rem column here — let it shrink back to its content. */
+  .trad-row-region { width: auto; }
 }
 @media (max-width: 560px) {
   /* Brand + search + toggle no longer fit on one row — drop the header search;
@@ -964,7 +1038,12 @@ img { max-width: 100%; display: block; }
   .header-inner { gap: 12px; }
   .nav-toggle { margin-left: auto; }
   .trad-row-region { display: none; } /* keep index rows to name + arrow */
-  .trad-row { gap: 12px; }
+  .trad-row, .trad-row-main { gap: 12px; }
+  /* Toggle shrinks to count + chevron. display:none drops the word from the
+     a11y tree too — the button's aria-label carries the full phrasing, so
+     nothing is lost. */
+  .trad-row-toggle-word { display: none; }
+  .trad-row-toggle { padding: 6px 10px; }
   /* 44vh on a tall phone makes the pool a near-square slab — keep it a pool.
      :not() is load-bearing. This rule lives in the responsive block at the
      bottom of the file, so a bare .water-frame would beat .water-frame--full on

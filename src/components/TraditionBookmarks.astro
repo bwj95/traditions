@@ -1,0 +1,190 @@
+---
+import { techniquesByCategory } from '../data/content';
+import { url } from '../utils';
+
+const mindItems = techniquesByCategory('mind');
+const bodyItems = techniquesByCategory('body');
+const breathItems = techniquesByCategory('breath');
+const dietItems = techniquesByCategory('diet');
+---
+<div class="bm">
+  <!-- Column 1: Mind & Breath -->
+  <div class="bm__col">
+    <details class="bm__group" data-bm-group="mind" open>
+      <summary class="bm__summary">
+        <span class="bm__group-title">Mind</span>
+        <span class="bm__count">{mindItems.length}</span>
+        <span class="bm__chev" aria-hidden="true"></span>
+      </summary>
+      <ul class="bm__list">
+        {mindItems.map((t) => (
+          <li>
+            <a class="bm__item" href={url(`technique/${t.id}`)}>
+              <span class="bm__name">{t.title}<span class="bm__arrow" aria-hidden="true">↗</span></span>
+              <span class="bm__note">{t.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+
+    <details class="bm__group" data-bm-group="breath" open style="margin-top: clamp(1.4rem, 3vw, 2.4rem);">
+      <summary class="bm__summary">
+        <span class="bm__group-title">Breath</span>
+        <span class="bm__count">{breathItems.length}</span>
+        <span class="bm__chev" aria-hidden="true"></span>
+      </summary>
+      <ul class="bm__list">
+        {breathItems.map((t) => (
+          <li>
+            <a class="bm__item" href={url(`technique/${t.id}`)}>
+              <span class="bm__name">{t.title}<span class="bm__arrow" aria-hidden="true">↗</span></span>
+              <span class="bm__note">{t.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </div>
+
+  <!-- Column 2: Body & Physical -->
+  <div class="bm__col">
+    <details class="bm__group" data-bm-group="body" open>
+      <summary class="bm__summary">
+        <span class="bm__group-title">Body</span>
+        <span class="bm__count">{bodyItems.length}</span>
+        <span class="bm__chev" aria-hidden="true"></span>
+      </summary>
+      <ul class="bm__list">
+        {bodyItems.map((t) => (
+          <li>
+            <a class="bm__item" href={url(`technique/${t.id}`)}>
+              <span class="bm__name">{t.title}<span class="bm__arrow" aria-hidden="true">↗</span></span>
+              <span class="bm__note">{t.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </div>
+
+  <!-- Column 3: Diet & Table -->
+  <div class="bm__col">
+    <details class="bm__group" data-bm-group="diet" open>
+      <summary class="bm__summary">
+        <span class="bm__group-title">Diet</span>
+        <span class="bm__count">{dietItems.length}</span>
+        <span class="bm__chev" aria-hidden="true"></span>
+      </summary>
+      <ul class="bm__list">
+        {dietItems.map((t) => (
+          <li>
+            <a class="bm__item" href={url(`technique/${t.id}`)}>
+              <span class="bm__name">{t.title}<span class="bm__arrow" aria-hidden="true">↗</span></span>
+              <span class="bm__note">{t.description}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </details>
+  </div>
+</div>
+
+<style>
+  .bm {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: clamp(1.4rem, 3vw, 2.4rem);
+    align-items: start;
+    text-align: left;
+  }
+  .bm__col {
+    display: flex;
+    flex-direction: column;
+  }
+  .bm__group { min-width: 0; }
+
+  /* Summary details header */
+  .bm__summary {
+    display: flex; align-items: center; gap: 0.55rem;
+    padding-bottom: 0.6rem; margin-bottom: 0.2rem;
+    border-bottom: 1px solid var(--border, rgba(255,255,255,0.08));
+    cursor: pointer; list-style: none;
+    transition: border-color 0.2s var(--ease, ease);
+    user-select: none;
+  }
+  .bm__summary::-webkit-details-marker { display: none; }
+  .bm__summary:hover { border-color: var(--border-bright, rgba(255,255,255,0.2)); }
+  .bm__summary:hover .bm__group-title { color: var(--text-dim, #b5b5b5); }
+
+  .bm__group-title {
+    font-family: var(--font-mono, monospace); font-size: 0.68rem; letter-spacing: 0.28em;
+    text-transform: uppercase; color: var(--text-faint, #777); font-weight: 500;
+    transition: color 0.2s var(--ease, ease);
+  }
+  .bm__count {
+    font-family: var(--font-mono, monospace); font-size: 0.62rem; color: var(--text-faint, #777);
+    margin-left: auto;
+  }
+  .bm__chev {
+    flex: 0 0 auto; width: 7px; height: 7px;
+    border-right: 1.5px solid var(--text-faint, #777); border-bottom: 1.5px solid var(--text-faint, #777);
+    transform: rotate(45deg) translate(-1px, -1px);
+    transition: transform 0.25s var(--ease, ease), border-color 0.2s var(--ease, ease);
+  }
+  .bm__group[open] .bm__chev { transform: rotate(-135deg) translate(-1px, -1px); }
+  .bm__summary:hover .bm__chev { border-color: var(--text-dim, #b5b5b5); }
+
+  .bm__list { list-style: none; padding: 0; margin: 0; }
+  .bm__group[open] .bm__list { animation: bm-open 0.28s var(--ease, ease) both; }
+  @keyframes bm-open { from { opacity: 0; translate: 0 -6px; } to { opacity: 1; translate: 0 0; } }
+
+  .bm__item {
+    display: flex; flex-direction: column; gap: 0.12rem;
+    padding: 0.62rem 0.55rem;
+    margin-inline: -0.55rem;
+    border-radius: var(--radius-sm, 6px);
+    transition: background 0.18s var(--ease, ease), transform 0.18s var(--ease, ease);
+  }
+  .bm__item:hover { background: var(--panel-2, rgba(255,255,255,0.04)); transform: translateX(3px); }
+
+  .bm__name {
+    display: flex; align-items: center; gap: 0.4rem;
+    color: var(--text, #f4f4f6); font-size: 0.95rem; line-height: 1.35;
+    font-weight: 500;
+  }
+  .bm__arrow {
+    font-size: 0.72em; color: var(--text-faint, #777);
+    opacity: 0; transform: translate(-3px, 2px);
+    transition: opacity 0.18s var(--ease, ease), transform 0.18s var(--ease, ease), color 0.18s;
+  }
+  .bm__item:hover .bm__arrow { opacity: 1; transform: none; color: var(--accent, #6b7d5a); }
+
+  .bm__note { color: var(--text-faint, #777); font-size: 0.82rem; line-height: 1.45; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bm__item, .bm__arrow, .bm__chev { transition: none; }
+    .bm__item:hover { transform: none; }
+    .bm__arrow { opacity: 1; transform: none; }
+    .bm__group[open] .bm__list { animation: none; }
+  }
+</style>
+
+<script>
+  // Save accordion state locally to preserve open/closed state on revisit
+  const KEY = 'trad-bm-closed';
+  const groups = [...document.querySelectorAll<HTMLDetailsElement>('[data-bm-group]')];
+
+  if (groups.length) {
+    let closed: string[] = [];
+    try { closed = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch {}
+
+    for (const g of groups) {
+      if (closed.includes(g.dataset.bmGroup || '')) g.open = false;
+      g.addEventListener('toggle', () => {
+        const now = groups.filter((x) => !x.open).map((x) => x.dataset.bmGroup || '');
+        try { localStorage.setItem(KEY, JSON.stringify(now)); } catch {}
+      });
+    }
+  }
+</script>
