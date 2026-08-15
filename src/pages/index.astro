@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro';
 import {
-  categories, categoryMeta, traditions, techniques,
+  categories, categoryMeta, traditions, quickResets, techniques,
   techniquesByTradition,
 } from '../data/content';
 import { traditionTile } from '../data/images';
@@ -14,8 +14,32 @@ import ShaderHero from '../components/ShaderHero.astro';
 import Grasshopper from '../components/Grasshopper.astro';
 import TraditionSelector from '../components/TraditionSelector.astro';
 import TraditionBookmarks from '../components/TraditionBookmarks.astro';
+import TechniqueCard from '../components/TechniqueCard.astro';
 ---
 <Base title="Traditions — ancient practices, catalogued">
+  {/* Full-bleed marquee reel above the nav bar. */}
+  <div class="topbar" slot="topbar">
+    <a href="#five-minute-reset" class="topbar-tag">
+      <Icon name="timer" size={14} /><span>5-min reset</span>
+    </a>
+    <div class="reset-marquee">
+      <div class="reset-marquee-track">
+        {[false, true].map((dup) =>
+          quickResets.map((t) => (
+            <a
+              href={url(`technique/${t.id}`)}
+              class="reset-marquee-item"
+              aria-hidden={dup ? 'true' : undefined}
+              tabindex={dup ? -1 : undefined}
+            >
+              {t.title}<span class="reset-marquee-dot">✦</span>
+            </a>
+          )),
+        )}
+      </div>
+    </div>
+  </div>
+
   <!-- ============ HERO LAUNCH BAND (Shader backdrop) ============ -->
   <section class="launch" id="explore">
     <ShaderHero />
@@ -40,6 +64,39 @@ import TraditionBookmarks from '../components/TraditionBookmarks.astro';
   <section class="section wrap bookmarks" id="practices" data-reveal>
     <p class="eyebrow bookmarks__label">Practices — ancient techniques, catalogued</p>
     <TraditionBookmarks />
+  </section>
+
+  <!-- ============ 5-MINUTE RESET GRID ============ -->
+  <section class="section wrap" id="five-minute-reset" data-reveal style="margin-top: clamp(3rem, 7vw, 5rem);">
+    <div class="section-head reset-head">
+      <div>
+        <h2 class="section-title"><Icon name="timer" size={20} /> 5-Minute Reset</h2>
+        <p class="section-note">Quick practices you can finish in about five minutes.</p>
+      </div>
+      <button class="reset-expand" id="reset-expand" aria-expanded="false" aria-controls="reset-grid">
+        Show all {quickResets.length}
+      </button>
+    </div>
+
+    <div class="card-grid reset-grid" id="reset-grid">
+      {quickResets.map((t) => <TechniqueCard technique={t} />)}
+    </div>
+
+    <script is:inline>
+      // Collapse immediately (inline, pre-paint). Without JS all cards just show.
+      (() => {
+        const grid = document.getElementById('reset-grid');
+        const btn = document.getElementById('reset-expand');
+        if (!grid || !btn) return;
+        const total = grid.children.length;
+        grid.classList.add('is-collapsed');
+        btn.addEventListener('click', () => {
+          const collapsed = grid.classList.toggle('is-collapsed');
+          btn.setAttribute('aria-expanded', String(!collapsed));
+          btn.textContent = collapsed ? `Show all ${total}` : 'Show fewer';
+        });
+      })();
+    </script>
   </section>
 
   <!-- ============ TRADITIONS (Row-by-Row index with hover previews) ============ -->
