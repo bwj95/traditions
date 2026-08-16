@@ -1,20 +1,30 @@
 ---
 /*
  * LivingBackground — the whole viewport is a living medium you can move
- * through. Two of them, swapped by the header button:
+ * through. Three of them, swapped by the header switch:
  *
  *   grass — a meadow receding to a horizon. Blades sway in an ambient breeze,
  *           part around the cursor, and SPRING back (they're elastic, so they
  *           overshoot and settle rather than easing flatly home). A click
  *           spreads them outward in a gust.
  *   water — a real 2D wave simulation (the Hugo Elias scheme: each cell becomes
- *           the average of its four neighbours minus its own previous height).
- *           The cursor cuts a continuous wake through it; a click drops a stone.
+ *           the average of its four neighbours minus its own previous height),
+ *           refracting an artwork underneath. The cursor cuts a continuous wake
+ *           through it; a click drops a ring train.
+ *   fire  — a blaze banked along the bottom edge: layered sparks rising and
+ *           cooling, slow smoke, a breathing glow, and heat shimmer. The cursor
+ *           is a draught; a click is a flare.
  *
- * Both share the same idea as the launcher shader: you don't drag the medium
- * around, you move THROUGH it, and depth is what sells it. Near blades answer
- * the cursor hard while far ones barely notice; water carries the disturbance
- * away as real travelling waves.
+ * All three share the same idea as the launcher shader: you don't drag the
+ * medium around, you move THROUGH it, and depth is what sells it. Near blades
+ * answer the cursor hard while far ones barely notice; water carries the
+ * disturbance away as real travelling waves; near sparks climb faster than far
+ * ones.
+ *
+ * The water and fire looks are modelled on canvasui.dev's Ripple and Blaze —
+ * see the notes on each. Both of those are WebGL shaders that warp live page
+ * content through the experimental html-in-canvas API; these are canvas 2D and
+ * warp their own artwork, which is the part that can actually ship.
  *
  * Decorative only — pointer-events:none, aria-hidden, z-index:-1 so anything
  * with a background paints over it. Under prefers-reduced-motion it renders a
@@ -32,7 +42,13 @@
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     /* ---------------------------------------------------- shared state */
-    let W = 0, H = 0, mode = root.dataset.bg === 'water' ? 'water' : 'grass';
+    // One place that decides what a data-bg value means, so adding a medium
+    // doesn't mean hunting down four separate ternaries that each fall back to
+    // grass on their own.
+    const MODES = ['grass', 'water', 'fire'];
+    const readMode = () => (MODES.includes(root.dataset.bg) ? root.dataset.bg : 'grass');
+
+    let W = 0, H = 0, mode = readMode();
     let running = false, raf = 0;
 
     // Pointer is sampled ONCE PER FRAME in the loop, never per event: a
@@ -175,7 +191,34 @@
     // SCALE is css px per simulation cell. The pool is idle unless something
     // touches it, so a finer grid than a constantly-running sim could afford:
     // 3 keeps the ripples smooth instead of blocky.
-    const SCALE = 3, STEPS = 2, DAMP = 0.982, REFRACT = 26, SPEC = 16;
+    const SCALE = 3, STEPS = 2;
+
+    // Tuned against canvasui.dev/docs/components/ripple. Their component is a
+    // WebGL2 shader summing up to 12 ANALYTIC wave packets; this stays a real
+    // grid simulation (it already gives a better cursor wake than an analytic
+    // sum can) and borrows the four things that actually make theirs read the
+    // way it does. Names match their props so the two can be compared.
+    //
+    // NOT borrowed: they distort live page content through the experimental
+    // html-in-canvas API. That's Chromium-behind-a-flag, so it can't ship — the
+    // pool refracts its own painted artwork instead, which works everywhere.
+    const DAMP = 0.993;      // was 0.982 — rings now cross the pool instead of dying in place
+    const REFRACT = 34;      // ~their `refraction`, in grid cells rather than css px
+    const DISPERSION = 0.34; // ~their `dispersion` — the signature look, see the render loop
+    const SPEC = 9;          // broad directional sheen
+    const SHINE = 0.8;       // ~their `shine` — tight glints on the crests
+    const WAVELENGTH = 78;   // ~their `wavelength`, css px between crests
+    const RINGS = 2;         // ~their `rings`, crests per wave train
+
+    // Precomputed per-channel refraction. Dispersion is the whole trick: red
+    // bends hardest and blue least, so a steep wave slope fringes warm on one
+    // side and cool on the other — exactly what glass (and their shader) does.
+    const REF_R = REFRACT * (1 + DISPERSION);
+    const REF_G = REFRACT;
+    const REF_B = REFRACT * (1 - DISPERSION);
+    // Slope at which refraction starts saturating, so the sample never flies far
+    // enough to alias. See the limiter in the render loop.
+    const MAXG = 2.5, INV_MAXG2 = 1 / (MAXG * MAXG);
     const water = {
       w: 0, h: 0, cur: null, prev: null, damp: null, src: null, out: null,
       sim: null, simCtx: null,
@@ -271,6 +314,39 @@
           }
         }
       },
+      // A click drops a RING TRAIN, not a single dome. Seeding one dip gives one
+      // expanding ring; seeding a windowed cosine gives `RINGS` crests that all
+      // travel out together, which is what makes their ripple read as water
+      // rather than as a pulse.
+      //
+      // The wave equation propagates a standing packet BOTH ways, so seeding
+      // `cur` alone sends half the energy inward. Setting `prev` to the same
+      // packet sampled one cell closer to the centre means the surface was
+      // nearer the middle a step ago — i.e. it is already travelling outward.
+      ringTrain(cx, cy, amp) {
+        this.active = performance.now() + 7000;
+        const lambda = WAVELENGTH / SCALE;         // crest spacing, in cells
+        const reach = lambda * (RINGS + 0.5);
+        const sigma = reach * 0.42;                // gaussian envelope width
+        const inv2s2 = 1 / (2 * sigma * sigma);
+        const k = (Math.PI * 2) / lambda;
+        // packet as a function of radius: cosine carrier under a gaussian window
+        const packet = (d) => Math.exp(-d * d * inv2s2) * Math.cos(d * k);
+
+        const x0 = Math.max(1, Math.round(cx - reach)), x1 = Math.min(this.w - 2, Math.round(cx + reach));
+        const y0 = Math.max(1, Math.round(cy - reach)), y1 = Math.min(this.h - 2, Math.round(cy + reach));
+        for (let y = y0; y <= y1; y++) {
+          for (let x = x0; x <= x1; x++) {
+            const dx = x - cx, dy = y - cy;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d > reach) continue;
+            const i = y * this.w + x;
+            this.cur[i] += amp * packet(d);
+            // one step ago the same packet sat one cell nearer the centre
+            this.prev[i] += amp * packet(d - 1);
+          }
+        }
+      },
       step() {
         const { w, h, cur, prev, damp } = this;
         for (let y = 1; y < h - 1; y++) {
@@ -299,7 +375,7 @@
             }
           }
         }
-        for (const c of clicks) this.disturb(c.x / SCALE, c.y / SCALE, 4.5, -26);
+        for (const c of clicks) this.ringTrain(c.x / SCALE, c.y / SCALE, -18);
         clicks.length = 0;
 
         // Nothing has touched the surface and the last waves have died — leave
@@ -327,15 +403,61 @@
             // source and wrapped with `% w`, which put a hard vertical seam
             // straight down the pool wherever the wrap landed. Clamping is
             // invisible because the rim is damped to stillness anyway.
-            let sx = Math.round(x + gx * REFRACT);
-            let sy = Math.round(y + gy * REFRACT);
+            //
+            // CHROMATIC DISPERSION: each channel is fetched from its own offset
+            // rather than all three from one. Flat water sends all three to the
+            // same pixel and nothing changes; only steep slopes separate them,
+            // so the fringing appears exactly on the wave faces.
+            // LIMIT THE GRADIENT, not just the sample coordinate. Right at the
+            // point of impact the surface is near-vertical, and an unlimited
+            // slope × REFRACT throws the sample dozens of cells away — adjacent
+            // output pixels then pull from wildly scattered sources and the
+            // impact point tears into a moiré hatch.
+            //
+            // Limit the VECTOR, never the components. Clamping gx and gy
+            // separately pins every steep pixel to one of four corner
+            // directions, which stamps a hard four-quadrant cross across the
+            // impact point. Scaling both by one factor preserves the direction
+            // the water is actually tilted.
+            //
+            // The factor is smooth (no kink at the threshold) and ≈1 for gentle
+            // slopes, so ordinary travelling ripples refract at full strength
+            // and only the violent centre is reined in.
+            const k = 1 / Math.sqrt(1 + (gx * gx + gy * gy) * INV_MAXG2);
+            const cgx = gx * k, cgy = gy * k;
+
+            let sx = Math.round(x + cgx * REF_R);
+            let sy = Math.round(y + cgy * REF_R);
             sx = sx < 0 ? 0 : sx > w - 1 ? w - 1 : sx;
             sy = sy < 0 ? 0 : sy > h - 1 ? h - 1 : sy;
-            const j = (sy * w + sx) * 4, o = i * 4;
-            const spec = gx * SPEC;
-            px[o] = src[j] + spec;
-            px[o + 1] = src[j + 1] + spec;
-            px[o + 2] = src[j + 2] + spec;
+            const jR = (sy * w + sx) * 4;
+
+            sx = Math.round(x + cgx * REF_G);
+            sy = Math.round(y + cgy * REF_G);
+            sx = sx < 0 ? 0 : sx > w - 1 ? w - 1 : sx;
+            sy = sy < 0 ? 0 : sy > h - 1 ? h - 1 : sy;
+            const jG = (sy * w + sx) * 4;
+
+            sx = Math.round(x + cgx * REF_B);
+            sy = Math.round(y + cgy * REF_B);
+            sx = sx < 0 ? 0 : sx > w - 1 ? w - 1 : sx;
+            sy = sy < 0 ? 0 : sy > h - 1 ? h - 1 : sy;
+            const jB = (sy * w + sx) * 4;
+
+            // Light from the upper left. The old sheen used gx alone, which
+            // brightens a whole side of every wave; a dot product against both
+            // gradients puts the highlight where the surface actually tilts into
+            // the light, and SQUARING it tightens that into a glint on the crest
+            // instead of a wash down the slope.
+            // the LIMITED gradient, or the near-vertical impact point squares
+            // into a blown-out white blob
+            const d = cgx * 0.6 + cgy * 0.8;
+            const spec = d * SPEC + (d > 0 ? d * d * SHINE : 0);
+
+            const o = i * 4;
+            px[o] = src[jR] + spec;
+            px[o + 1] = src[jG + 1] + spec;
+            px[o + 2] = src[jB + 2] + spec;
             px[o + 3] = 255;
           }
         }
@@ -347,10 +469,260 @@
       },
     };
 
+    /* ===================================================== FIRE =========
+       Modelled on canvasui.dev/docs/components/blaze: fire banked along the
+       bottom edge, with sparks, smoke and heat distortion rising into the
+       content. Theirs is a WebGL2 shader pair (simplex/FBM noise, half-res fire
+       buffer, then a composite pass that warps the page). This is canvas 2D
+       like its two siblings, so the parts are rebuilt rather than ported:
+
+         sparks  — real particles in LAYERS, not a noise field. Same depth idea
+                   the grass uses: a near spark is bigger, faster, brighter and
+                   answers the cursor hard, a far one barely moves. That
+                   mismatch is what gives a flat canvas depth.
+         smoke   — a few wide, slow, low-alpha puffs. Deliberately dark and
+                   nearly invisible: smoke's job is to dirty the glow above the
+                   flame, not to be seen as shapes.
+         glow    — a warm wash climbing off the bottom edge, breathing slightly.
+         shimmer — heat distortion. They warp the page content, which needs the
+                   experimental html-in-canvas API; instead the fire is drawn to
+                   an offscreen canvas and blitted back in horizontal SLICES,
+                   each nudged sideways by a wobble that grows with height. Hot
+                   air right above a flame bends most, so the shimmer belongs
+                   over the flame and must fade out to nothing at the top. */
+    const FIRE_LAYERS = 4;   // ~their `layers`
+    const SPRITE_STEPS = 7;  // colour steps baked along the cooling ramp
+    const SLICES = 44;       // shimmer resolution; more is smoother and dearer
+    const fire = {
+      sparks: [], smoke: [], off: null, offCtx: null, col: null,
+      resize() {
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        canvas.width = Math.round(W * dpr);
+        canvas.height = Math.round(H * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        // The shimmer has to re-read what was already drawn, so the fire is
+        // composed once here and sampled from. Drawing straight to the visible
+        // canvas would mean reading back from it every frame instead.
+        if (!this.off) this.off = document.createElement('canvas');
+        this.off.width = canvas.width;
+        this.off.height = canvas.height;
+        this.offCtx = this.off.getContext('2d');
+        this.offCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        this.build();
+      },
+      // One radial gradient per spark per frame would cap the density at a few
+      // dozen — createRadialGradient allocates, and it is the single most
+      // expensive call in this file. Bake the glow into a sprite ONCE per
+      // colour step instead, then every spark is a plain drawImage and the
+      // count can go up by an order of magnitude.
+      makeSprite(col) {
+        const S = 64, c = document.createElement('canvas');
+        c.width = c.height = S;
+        const g = c.getContext('2d');
+        const rg = g.createRadialGradient(S / 2, S / 2, 0, S / 2, S / 2, S / 2);
+        rg.addColorStop(0, `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},1)`);
+        rg.addColorStop(0.28, `rgba(${col[0] | 0},${col[1] | 0},${col[2] | 0},0.38)`);
+        rg.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = rg;
+        g.fillRect(0, 0, S, S);
+        return c;
+      },
+      build() {
+        const ember = hex(css('--lbg-a', '#7a1f0b'), [122, 31, 11]);
+        const mid = hex(css('--lbg-b', '#e2621d'), [226, 98, 29]);
+        const tip = hex(css('--lbg-c', '#ffc061'), [255, 192, 97]);
+        this.col = { ember, mid, tip };
+
+        // the cooling ramp, pre-tinted: hot tip → orange → dull ember
+        this.sprites = [];
+        for (let i = 0; i < SPRITE_STEPS; i++) {
+          const f = i / (SPRITE_STEPS - 1);
+          this.sprites.push(this.makeSprite(
+            f < 0.5 ? mixRGB(tip, mid, f / 0.5) : mixRGB(mid, ember, (f - 0.5) / 0.5)
+          ));
+        }
+
+        const rand = (a, b) => a + Math.random() * (b - a);
+        this.sparks = [];
+        // scale with area, as the grass does, so a wide monitor isn't sparser
+        const per = Math.max(45, Math.min(190, Math.round((W * H) / 8200)));
+        for (let L = 0; L < FIRE_LAYERS; L++) {
+          // layer 0 is the far field, FIRE_LAYERS-1 the near one
+          const d = FIRE_LAYERS === 1 ? 1 : L / (FIRE_LAYERS - 1);
+          for (let i = 0; i < per; i++) {
+            this.sparks.push({
+              x: rand(-40, W + 40),
+              y: rand(0, H),          // pre-seeded up the screen so it starts full
+              depth: d,
+              // near sparks climb faster: parallax, and it reads as speed
+              vy: rand(0.5, 1.25) * (0.35 + 1.5 * d),
+              size: rand(0.6, 1.7) * (0.45 + 1.25 * d),
+              phase: rand(0, 6.2832),
+              wob: rand(0.4, 1.5),
+              drift: rand(-0.25, 0.25),
+              vx: 0,
+              seed: rand(0, 1),
+            });
+          }
+        }
+        this.smoke = [];
+        for (let i = 0; i < 16; i++) {
+          this.smoke.push({
+            x: rand(-100, W + 100), y: rand(H * 0.1, H),
+            r: rand(H * 0.10, H * 0.26),
+            vy: rand(0.18, 0.5), phase: rand(0, 6.2832), drift: rand(-0.2, 0.2),
+          });
+        }
+      },
+      // Respawn at the bottom. Sparks are born along the whole width because the
+      // blaze is an EDGE, not a point source.
+      recycle(s) {
+        s.x = Math.random() * (W + 80) - 40;
+        s.y = H + Math.random() * 40;
+        s.vx = 0;
+        s.seed = Math.random();
+      },
+      frame(t) {
+        const o = this.offCtx;
+        const { ember, mid, tip } = this.col;
+        o.setTransform(Math.min(2, devicePixelRatio || 1), 0, 0, Math.min(2, devicePixelRatio || 1), 0, 0);
+        o.clearRect(0, 0, W, H);
+
+        // ---- ambient glow off the bottom edge. Breathes, so a still page is
+        // never quite still — a fire that holds one brightness reads as a
+        // gradient, not a fire.
+        const breathe = reduce ? 1 : 0.88 + 0.12 * Math.sin(t * 0.0011) + 0.05 * Math.sin(t * 0.0031);
+        const g = o.createLinearGradient(0, H, 0, H * 0.18);
+        g.addColorStop(0, `rgba(${tip[0]},${tip[1]},${tip[2]},${0.5 * breathe})`);
+        g.addColorStop(0.22, `rgba(${mid[0]},${mid[1]},${mid[2]},${0.32 * breathe})`);
+        g.addColorStop(0.62, `rgba(${ember[0]},${ember[1]},${ember[2]},${0.13 * breathe})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        o.fillStyle = g;
+        o.fillRect(0, 0, W, H);
+
+        // ---- smoke, under the sparks so embers read as being in front of it
+        for (const p of this.smoke) {
+          if (!reduce) {
+            p.y -= p.vy;
+            p.x += Math.sin(t * 0.0004 + p.phase) * 0.5 + p.drift;
+            if (p.y + p.r < 0) { p.y = H + p.r; p.x = Math.random() * (W + 200) - 100; }
+          }
+          // fade in off the bottom and out toward the top
+          const up = 1 - p.y / H;
+          const a = Math.max(0, Math.min(1, up * 2.2)) * Math.max(0, 1 - up * 1.15) * 0.30;
+          if (a <= 0.001) continue;
+          const rg = o.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+          rg.addColorStop(0, `rgba(${ember[0]},${ember[1]},${ember[2]},${a})`);
+          rg.addColorStop(1, 'rgba(0,0,0,0)');
+          o.fillStyle = rg;
+          o.beginPath(); o.arc(p.x, p.y, p.r, 0, 6.2832); o.fill();
+        }
+
+        // ---- a click is a flare: shove nearby sparks up and outward, and the
+        // impulse goes to VELOCITY so the motion decays on its own
+        for (const c of clicks) {
+          for (const s of this.sparks) {
+            const dx = s.x - c.x, dy = s.y - c.y;
+            const dist = Math.hypot(dx, dy);
+            const R = 240;
+            if (dist > R) continue;
+            const f = (1 - dist / R) ** 2;
+            s.vx += (dist > 0.01 ? dx / dist : 0) * f * 7 * (0.4 + s.depth);
+            s.y -= f * 26 * (0.4 + s.depth);
+          }
+        }
+        clicks.length = 0;
+
+        // ---- sparks. Additive, so overlapping embers bloom into hot cores
+        // instead of stacking into flat opaque dots.
+        o.globalCompositeOperation = 'lighter';
+        const pspeed = Math.min(Math.hypot(ptr.vx, ptr.vy), 60);
+        for (const s of this.sparks) {
+          if (!reduce) {
+            // the draught: pushed away radially and dragged along the travel
+            // direction, both scaled by depth
+            if (ptr.live) {
+              const dx = s.x - ptr.x, dy = s.y - ptr.y;
+              const R = 90 + 150 * s.depth;
+              const dist = Math.hypot(dx, dy);
+              if (dist < R) {
+                const f = (1 - dist / R) ** 2 * (0.3 + s.depth);
+                s.vx += (dist > 0.01 ? dx / dist : 0) * f * 0.8;
+                s.vx += (ptr.vx / 30) * f * 0.9;
+                s.y -= f * (0.5 + pspeed * 0.05);
+              }
+            }
+            s.vx *= 0.93;                       // air drag
+            s.y -= s.vy;
+            s.x += s.vx + Math.sin(t * 0.001 * s.wob + s.phase) * 0.45 * (0.3 + s.depth) + s.drift;
+            if (s.y < -30) this.recycle(s);
+          }
+
+          // Brightness: hottest at birth, cooling as it climbs. Their shader
+          // fades on 1 - smoothstep(0.55, 1.0, fy); same curve here.
+          const fy = 1 - s.y / H;               // 0 at the bottom, 1 at the top
+          let a = 1 - Math.max(0, Math.min(1, (fy - 0.12) / 0.78));
+          a *= a;                                // bias the life toward the flame
+          a *= 0.25 + 0.75 * s.depth;
+          if (a <= 0.004) continue;
+          // cools tip → mid → ember as it rises: pick the pre-tinted sprite
+          let k = (fy * 1.7 * SPRITE_STEPS) | 0;
+          k = k < 0 ? 0 : k > SPRITE_STEPS - 1 ? SPRITE_STEPS - 1 : k;
+          const r = s.size * (0.7 + 0.5 * Math.sin(t * 0.006 + s.phase)) * 4.5;
+          o.globalAlpha = a;
+          o.drawImage(this.sprites[k], s.x - r, s.y - r, r * 2, r * 2);
+        }
+        o.globalAlpha = 1;
+        o.globalCompositeOperation = 'source-over';
+
+        // ---- heat shimmer. Blit back in slices, each displaced sideways by a
+        // travelling wobble. Amplitude is zero at the very bottom (the fuel bed
+        // itself doesn't wobble), peaks just above the flame, and dies out
+        // before the top — otherwise the whole page looks like it's underwater.
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (reduce) {
+          ctx.drawImage(this.off, 0, 0);
+          return;
+        }
+        // Slice boundaries must be INTEGER device pixels and must tile exactly:
+        // round each edge and take the difference. Fractional rects resample,
+        // and an earlier version that padded every slice by +1 row redrew that
+        // row at a different offset — which is what stamped a hairline across
+        // the page at every single boundary.
+        const dpr = Math.min(2, devicePixelRatio || 1);
+        for (let i = 0; i < SLICES; i++) {
+          const y0 = Math.round((i * canvas.height) / SLICES);
+          const y1 = Math.round(((i + 1) * canvas.height) / SLICES);
+          const sh = y1 - y0;
+          if (sh <= 0) continue;
+          const up = 1 - (y0 + sh * 0.5) / canvas.height;   // 0 bottom … 1 top
+          const env = Math.max(0, Math.sin(Math.min(1, up * 1.55) * Math.PI));
+          // Kept deliberately low-frequency in `up`: if the offset changes much
+          // between neighbouring slices the boundary shows as a tear rather
+          // than as shimmer.
+          // ROUND to whole device pixels. A fractional destination makes the
+          // browser resample the slice, and two neighbouring slices landing on
+          // different subpixel phases leave a faint seam between them. The
+          // shimmer is several pixels wide, so quantising it costs nothing.
+          const dx = Math.round(
+            (Math.sin(t * 0.0021 + up * 6.5) * 3.4 +
+             Math.sin(t * 0.0013 + up * 11) * 2.1 +
+             Math.sin(t * 0.0037 + up * 3.5) * 1.5) * env * dpr
+          );
+          ctx.drawImage(this.off, 0, y0, canvas.width, sh, dx, y0, canvas.width, sh);
+        }
+      },
+    };
+
     /* ------------------------------------------------------- driver */
+    const RENDERERS = { grass, water, fire };
+    const renderer = () => RENDERERS[mode] || grass;
+
     function resize() {
       W = innerWidth; H = innerHeight;
-      (mode === 'water' ? water : grass).resize();
+      renderer().resize();
       if (reduce) frame(0);
     }
 
@@ -362,7 +734,7 @@
       ptr.x = evX; ptr.y = evY;
       if (!ptr.seen) { ptr.px = ptr.x; ptr.py = ptr.y; }
       ptr.vx = ptr.x - ptr.px; ptr.vy = ptr.y - ptr.py;
-      (mode === 'water' ? water : grass).frame(t);
+      renderer().frame(t);
     }
 
     const loop = (t) => { frame(t); raf = requestAnimationFrame(loop); };
@@ -370,7 +742,7 @@
     const stop = () => { running = false; cancelAnimationFrame(raf); };
 
     function setMode(next) {
-      if (next !== 'grass' && next !== 'water') return;
+      if (!MODES.includes(next)) return;
       mode = next;
       canvas.classList.remove('is-in');
       resize();
@@ -384,7 +756,7 @@
     document.addEventListener('visibilitychange', () => (document.hidden ? stop() : play()));
     // Base.astro's toggle flips the attribute; the canvas just follows it.
     new MutationObserver(() => {
-      const next = root.dataset.bg === 'water' ? 'water' : 'grass';
+      const next = readMode();
       if (next !== mode) setMode(next);
     }).observe(root, { attributes: true, attributeFilter: ['data-bg'] });
 

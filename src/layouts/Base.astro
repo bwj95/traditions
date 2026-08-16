@@ -44,7 +44,7 @@ const {
     <script is:inline>
       (() => {
         let m = 'grass';
-        try { const v = localStorage.getItem('traditions-bg'); if (v === 'water' || v === 'grass') m = v; } catch {}
+        try { const v = localStorage.getItem('traditions-bg'); if (v === 'water' || v === 'grass' || v === 'fire') m = v; } catch {}
         document.documentElement.dataset.bg = m;
       })();
     </script>
@@ -76,6 +76,9 @@ const {
             </button>
             <button type="button" data-bg-set="water" aria-pressed="false" title="Water" aria-label="Water background">
               <Icon name="waves" size={15} />
+            </button>
+            <button type="button" data-bg-set="fire" aria-pressed="false" title="Fire" aria-label="Fire background">
+              <Icon name="flame" size={15} />
             </button>
           </div>
           {/* Small screens only — .cat-nav is hidden there, so these links need
@@ -124,6 +127,9 @@ const {
                 <button type="button" data-bg-set="water" aria-pressed="false" title="Water" aria-label="Water background">
                   <Icon name="waves" size={15} />
                 </button>
+                <button type="button" data-bg-set="fire" aria-pressed="false" title="Fire" aria-label="Fire background">
+                  <Icon name="flame" size={15} />
+                </button>
               </div>
             </div>
           </nav>
@@ -163,7 +169,7 @@ const {
         const root = document.documentElement;
         const btns = document.querySelectorAll('[data-bg-set]');
         const sync = () => {
-          const m = root.dataset.bg === 'water' ? 'water' : 'grass';
+          const m = ['grass','water','fire'].includes(root.dataset.bg) ? root.dataset.bg : 'grass';
           btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.bgSet === m)));
         };
         btns.forEach((b) => b.addEventListener('click', () => {

@@ -119,8 +119,39 @@
   --lbg-a: #4d8ba6; --lbg-b: #6fb3b4; --lbg-c: #a5d8c6; --lbg-opacity: 0.42;
 }
 
+/* fire — warm ash and ember. --lbg-a/b/c are the flame's own cooling ramp:
+   a = deep ember (coolest, used for smoke too), b = mid orange, c = hot tip. */
+:root[data-bg='fire'] {
+  --bg: #f7f2ee;
+  --bg-elev: #fffbf8;
+  --bg-sunken: #efe6df;
+  --text: #2e2622;
+  --text-soft: #6d5d55;
+  --text-faint: #98867c;
+  --border: #e6d8ce;
+  --border-strong: #d3bdae;
+  --accent: #b4501f;
+  --accent-ink: #8a3a13;
+  --spectrum: linear-gradient(108deg, #8a2f0d 0%, #d4611c 46%, #f0a63f 100%);
+  --lbg-a: #a8492a; --lbg-b: #e2761d; --lbg-c: #ffc978; --lbg-opacity: 0.34;
+}
+
 @media (prefers-color-scheme: dark) {
   :root { --lbg-a: #4a5a41; --lbg-b: #6d8159; --lbg-c: #9db386; --lbg-opacity: 0.42; }
+  :root[data-bg='fire'] {
+    --bg: #17100c;
+    --bg-elev: #211711;
+    --bg-sunken: #100b08;
+    --text: #f0e3d9;
+    --text-soft: #b8a294;
+    --text-faint: #8c7768;
+    --border: #38251a;
+    --border-strong: #57392a;
+    --accent: #ef8f4a;
+    --accent-ink: #ffb877;
+    --spectrum: linear-gradient(108deg, #c2481a 0%, #ef8039 46%, #ffc061 100%);
+    --lbg-a: #7a1f0b; --lbg-b: #e2621d; --lbg-c: #ffc061; --lbg-opacity: 0.62;
+  }
   :root[data-bg='water'] {
     --bg: #0e1618;
     --bg-elev: #162124;
