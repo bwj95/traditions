@@ -416,6 +416,30 @@ img { max-width: 100%; display: block; }
 }
 .attribution { margin: 0; font-size: 0.82rem; color: var(--text-faint); }
 
+/* The maker's mark in the footer — the one link that LEAVES this site, so it is
+   set apart from .footer-links rather than sitting among them. Colour flows
+   through currentColor into the mark's glass and web. */
+.footer-home {
+  --mark-size: 34px;
+  display: inline-flex; align-items: center; gap: 10px;
+  margin-top: 20px; padding-top: 18px;
+  border-top: 1px solid var(--border);
+  width: 100%;
+  color: var(--text-faint);
+  font-family: var(--font-sans); font-size: 0.82rem; letter-spacing: 0.01em;
+  transition: color 0.2s ease;
+}
+.footer-home:hover { color: var(--accent); }
+/* the arrow travels, not the link's own box — moving the box under the pointer
+   is what makes hovers flicker near an edge */
+/* The gap is a MARGIN, not a leading space inside the span: Astro trims/collapses
+   whitespace text nodes around inline elements, so " →" renders as "→". */
+.footer-home__arrow { display: inline-block; margin-left: 0.32em; transition: translate 0.2s ease; }
+.footer-home:hover .footer-home__arrow { translate: 3px 0; }
+@media (prefers-reduced-motion: reduce) {
+  .footer-home, .footer-home__arrow { transition: none; }
+}
+
 /* ---------- Home hero ---------- */
 /* Fills exactly the first screen: copy floats mid-viewport, the space below
    stays empty so the living background reads as part of the home screen.

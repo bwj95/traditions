@@ -5,6 +5,7 @@ import { url } from '../utils';
 import Icon from '../components/Icon.astro';
 import CategoryIcon from '../components/CategoryIcon.astro';
 import LivingBackground from '../components/LivingBackground.astro';
+import FlameGlobe from '../components/FlameGlobe.astro';
 import Grasshopper from '../components/Grasshopper.astro';
 
 interface Props {
@@ -155,6 +156,13 @@ const {
             Each practice carries an attribution to the tradition it comes from —
             honoring its origin is part of the point.
           </p>
+
+          {/* the maker's mark — the way back to the main site. Sits apart from
+              .footer-links because those are in-site navigation and this leaves. */}
+          <a class="footer-home" href="https://bwj95.github.io" rel="noopener">
+            <FlameGlobe class="footer-home__mark" />
+            <span>More things built<span class="footer-home__arrow" aria-hidden="true">→</span></span>
+          </a>
         </div>
       </footer>
     </div>
